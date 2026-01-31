@@ -44,8 +44,8 @@ export const CreateAccount: React.FC = () => {
         console.log('Registration attempt:', formData);
 
         // Simulate successful registration
-        alert('Account created successfully!');
-        navigate('/login');
+        alert('Account created! Let\'s set up your profile.');
+        navigate('/onboarding');
     };
 
     return (
@@ -71,67 +71,71 @@ export const CreateAccount: React.FC = () => {
                     <form onSubmit={handleSubmit} className="auth-form">
                         {error && <div className="error-message">{error}</div>}
 
-                        <div className="form-group">
-                            <label htmlFor="fullName">Full Name</label>
-                            <div className="input-wrapper">
-                                <input
-                                    type="text"
-                                    id="fullName"
-                                    name="fullName"
-                                    value={formData.fullName}
-                                    onChange={handleChange}
-                                    placeholder="John Doe"
-                                    required
-                                />
-                                <span className="input-icon">👤</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div className="form-group">
+                                <label htmlFor="fullName">Full Name</label>
+                                <div className="input-wrapper">
+                                    <input
+                                        type="text"
+                                        id="fullName"
+                                        name="fullName"
+                                        value={formData.fullName}
+                                        onChange={handleChange}
+                                        placeholder="John Doe"
+                                        required
+                                    />
+                                    <span className="input-icon">👤</span>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label htmlFor="email">Email</label>
+                                <div className="input-wrapper">
+                                    <input
+                                        type="email"
+                                        id="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        placeholder="john@example.com"
+                                        required
+                                    />
+                                    <span className="input-icon">✉</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="form-group">
-                            <label htmlFor="email">Email Address</label>
-                            <div className="input-wrapper">
-                                <input
-                                    type="email"
-                                    id="email"
-                                    name="email"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    placeholder="john@example.com"
-                                    required
-                                />
-                                <span className="input-icon">✉</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div className="form-group">
+                                <label htmlFor="password">Password</label>
+                                <div className="input-wrapper">
+                                    <input
+                                        type="password"
+                                        id="password"
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        placeholder="Password"
+                                        required
+                                    />
+                                    <span className="input-icon">🔒</span>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className="form-group">
-                            <label htmlFor="password">Password</label>
-                            <div className="input-wrapper">
-                                <input
-                                    type="password"
-                                    id="password"
-                                    name="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    placeholder="Create a password"
-                                    required
-                                />
-                                <span className="input-icon">🔒</span>
-                            </div>
-                        </div>
-
-                        <div className="form-group">
-                            <label htmlFor="confirmPassword">Confirm Password</label>
-                            <div className="input-wrapper">
-                                <input
-                                    type="password"
-                                    id="confirmPassword"
-                                    name="confirmPassword"
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange}
-                                    placeholder="Confirm your password"
-                                    required
-                                />
-                                <span className="input-icon">🔒</span>
+                            <div className="form-group">
+                                <label htmlFor="confirmPassword">Confirm</label>
+                                <div className="input-wrapper">
+                                    <input
+                                        type="password"
+                                        id="confirmPassword"
+                                        name="confirmPassword"
+                                        value={formData.confirmPassword}
+                                        onChange={handleChange}
+                                        placeholder="Confirm"
+                                        required
+                                    />
+                                    <span className="input-icon">🔒</span>
+                                </div>
                             </div>
                         </div>
 

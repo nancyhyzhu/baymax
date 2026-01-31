@@ -47,7 +47,7 @@ export const Settings: React.FC = () => {
     );
 
     return (
-        <div className="glass-panel" style={{ padding: '2rem', maxWidth: '800px', margin: '2rem auto' }}>
+        <div className="glass-panel" style={{ padding: '2rem', maxWidth: '1200px', margin: '2rem auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid var(--input-border)', paddingBottom: '1rem' }}>
                 <UserIcon size={32} color="#3b82f6" />
                 <h2 style={{ margin: 0 }}>User Profile & Settings</h2>

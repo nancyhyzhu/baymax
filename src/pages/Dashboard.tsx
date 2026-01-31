@@ -123,39 +123,34 @@ export const Dashboard: React.FC = () => {
             {activeTab === 'overview' ? (
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+                    gridAutoRows: '320px',
                     gap: '2rem',
                     marginBottom: '2rem'
                 }}>
-                    {/* Left Column: Graphs */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', flex: 2 }}>
-                        <GraphCard
-                            title="Heart Rate"
-                            data={hrData}
-                            dataKey="value"
-                            color="#ef4444"
-                            unit="BPM"
-                            averageValue={getAverage(hrData)}
-                            status={hrData.some(d => d.status === 'atypical') ? 'atypical' : 'typical'}
-                            onNotifyCaretaker={() => alert('Notifying caretaker about Heart Rate...')}
-                        />
-                        <GraphCard
-                            title="Respiration Rate"
-                            data={brData}
-                            dataKey="value"
-                            color="#3b82f6"
-                            unit="Breaths/min"
-                            averageValue={getAverage(brData)}
-                            status={brData.some(d => d.status === 'atypical') ? 'atypical' : 'typical'}
-                            onNotifyCaretaker={() => alert('Notifying caretaker about Respiration Rate...')}
-                        />
-                    </div>
+                    <GraphCard
+                        title="Heart Rate"
+                        data={hrData}
+                        dataKey="value"
+                        color="#ef4444"
+                        unit="BPM"
+                        averageValue={getAverage(hrData)}
+                        status={hrData.some(d => d.status === 'atypical') ? 'atypical' : 'typical'}
+                        onNotifyCaretaker={() => alert('Notifying caretaker about Heart Rate...')}
+                    />
+                    <ExpressionWidget expression="neutral" /> {/* Static for now */}
 
-                    {/* Right Column: Expression & Medication Widget */}
-                    <div style={{ flex: 1, minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                        <ExpressionWidget expression="neutral" /> {/* Static for now */}
-                        <MedicationWidget />
-                    </div>
+                    <GraphCard
+                        title="Respiration Rate"
+                        data={brData}
+                        dataKey="value"
+                        color="#3b82f6"
+                        unit="Breaths/min"
+                        averageValue={getAverage(brData)}
+                        status={brData.some(d => d.status === 'atypical') ? 'atypical' : 'typical'}
+                        onNotifyCaretaker={() => alert('Notifying caretaker about Respiration Rate...')}
+                    />
+                    <MedicationWidget />
                 </div>
             ) : (
                 <div style={{ height: 'calc(100vh - 200px)', paddingBottom: '2rem' }}>

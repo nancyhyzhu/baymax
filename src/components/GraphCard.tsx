@@ -24,7 +24,7 @@ export const GraphCard: React.FC<GraphCardProps> = ({
     onNotifyCaretaker
 }) => {
     return (
-        <div className="glass-panel" style={{ padding: '1rem', height: '240px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        <div className="glass-panel" style={{ padding: '1rem', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <h3 style={{ margin: 0, opacity: 0.8 }}>{title}</h3>

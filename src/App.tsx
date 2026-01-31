@@ -7,6 +7,7 @@ import { Login } from './pages/Login';
 import { CreateAccount } from './pages/CreateAccount';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
+import { Onboarding } from './pages/Onboarding';
 
 function AppContent() {
     const location = useLocation();
@@ -23,6 +24,7 @@ function AppContent() {
                 <Route path="/create-account" element={<CreateAccount />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/onboarding" element={<Onboarding />} />
 
                 {/* Dashboard Routes */}
                 <Route path="/" element={<Navigate to="/login" replace />} />

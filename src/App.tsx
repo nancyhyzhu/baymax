@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { UserProvider } from './context/UserProvider';
 import { Header } from './components/Header';
 import { Dashboard } from './pages/Dashboard';
 import { DailySession } from './pages/DailySession';
@@ -40,7 +41,9 @@ function AppContent() {
 function App() {
     return (
         <Router>
-            <AppContent />
+            <UserProvider>
+                <AppContent />
+            </UserProvider>
         </Router>
     );
 }

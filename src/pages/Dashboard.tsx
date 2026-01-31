@@ -3,11 +3,15 @@ import { useLocation } from 'react-router-dom';
 import { GraphCard } from '../components/GraphCard';
 import { ExpressionWidget } from '../components/ExpressionWidget';
 import { AtypicalWarningModal } from '../components/AtypicalWarningModal';
+import { MedicationWidget } from '../components/MedicationWidget';
+import { MedicationCalendar } from '../components/MedicationCalendar';
 import { generateWeeklyData, generateMonthlyData, DataPoint } from '../utils/dataUtils';
-import { Bell } from 'lucide-react';
+import { Bell, Calendar as CalendarIcon } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
     const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
+    const [activeTab, setActiveTab] = useState<'overview' | 'medications'>('overview');
+
     const [hrData, setHrData] = useState<DataPoint[]>([]);
     const [brData, setBrData] = useState<DataPoint[]>([]);
     const [showWarning, setShowWarning] = useState(false);
@@ -68,78 +72,96 @@ export const Dashboard: React.FC = () => {
             {/* Controls */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem' }}>
                 <button
-                    onClick={() => setShowWarning(true)}
+                    onClick={() => atypicalMetrics.length > 0 && setShowWarning(true)}
+                    disabled={atypicalMetrics.length === 0}
                     style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
                         padding: '0.5rem 1rem',
-                        background: 'rgba(239, 68, 68, 0.1)',
-                        color: 'var(--color-danger)',
-                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        background: atypicalMetrics.length > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                        color: atypicalMetrics.length > 0 ? 'var(--color-danger)' : '#10b981',
+                        border: `1px solid ${atypicalMetrics.length > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`,
                         borderRadius: '8px',
                         fontSize: '0.9rem',
                         fontWeight: 600,
-                        cursor: 'pointer'
+                        cursor: atypicalMetrics.length > 0 ? 'pointer' : 'default',
+                        opacity: atypicalMetrics.length > 0 ? 1 : 0.8
                     }}
                 >
                     <Bell size={16} />
-                    Show Alerts
+                    {atypicalMetrics.length > 0 ? 'Show Alerts' : 'No Alerts'}
                 </button>
 
                 <div className="glass-panel" style={{ display: 'flex', padding: '0.25rem', gap: '0.25rem' }}>
                     <button
-                        className={viewMode === 'weekly' ? 'primary-btn' : ''}
-                        onClick={() => setViewMode('weekly')}
-                        style={{ fontSize: '0.8rem', padding: '0.4rem 1rem' }}
+                        className={activeTab === 'overview' && viewMode === 'weekly' ? 'primary-btn' : ''}
+                        onClick={() => { setActiveTab('overview'); setViewMode('weekly'); }}
+                        style={{ fontSize: '0.8rem', padding: '0.4rem 1rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}
                     >
                         Weekly
                     </button>
                     <button
-                        className={viewMode === 'monthly' ? 'primary-btn' : ''}
-                        onClick={() => setViewMode('monthly')}
-                        style={{ fontSize: '0.8rem', padding: '0.4rem 1rem' }}
+                        className={activeTab === 'overview' && viewMode === 'monthly' ? 'primary-btn' : ''}
+                        onClick={() => { setActiveTab('overview'); setViewMode('monthly'); }}
+                        style={{ fontSize: '0.8rem', padding: '0.4rem 1rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}
                     >
                         Monthly
+                    </button>
+                    <div style={{ width: '1px', background: '#e5e7eb', margin: '0 0.5rem' }}></div>
+                    <button
+                        className={activeTab === 'medications' ? 'primary-btn' : ''}
+                        onClick={() => setActiveTab('medications')}
+                        style={{ fontSize: '0.8rem', padding: '0.4rem 1rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}
+                    >
+                        <CalendarIcon size={14} />
+                        Schedule
                     </button>
                 </div>
             </div>
 
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: '2rem',
-                marginBottom: '2rem'
-            }}>
-                {/* Left Column: Graphs */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', flex: 2 }}>
-                    <GraphCard
-                        title="Heart Rate"
-                        data={hrData}
-                        dataKey="value"
-                        color="#ef4444"
-                        unit="BPM"
-                        averageValue={getAverage(hrData)}
-                        status={hrData.some(d => d.status === 'atypical') ? 'atypical' : 'typical'}
-                        onNotifyCaretaker={() => alert('Notifying caretaker about Heart Rate...')}
-                    />
-                    <GraphCard
-                        title="Respiration Rate"
-                        data={brData}
-                        dataKey="value"
-                        color="#3b82f6"
-                        unit="Breaths/min"
-                        averageValue={getAverage(brData)}
-                        status={brData.some(d => d.status === 'atypical') ? 'atypical' : 'typical'}
-                        onNotifyCaretaker={() => alert('Notifying caretaker about Respiration Rate...')}
-                    />
-                </div>
+            {activeTab === 'overview' ? (
+                <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    gap: '2rem',
+                    marginBottom: '2rem'
+                }}>
+                    {/* Left Column: Graphs */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', flex: 2 }}>
+                        <GraphCard
+                            title="Heart Rate"
+                            data={hrData}
+                            dataKey="value"
+                            color="#ef4444"
+                            unit="BPM"
+                            averageValue={getAverage(hrData)}
+                            status={hrData.some(d => d.status === 'atypical') ? 'atypical' : 'typical'}
+                            onNotifyCaretaker={() => alert('Notifying caretaker about Heart Rate...')}
+                        />
+                        <GraphCard
+                            title="Respiration Rate"
+                            data={brData}
+                            dataKey="value"
+                            color="#3b82f6"
+                            unit="Breaths/min"
+                            averageValue={getAverage(brData)}
+                            status={brData.some(d => d.status === 'atypical') ? 'atypical' : 'typical'}
+                            onNotifyCaretaker={() => alert('Notifying caretaker about Respiration Rate...')}
+                        />
+                    </div>
 
-                {/* Right Column: Expression */}
-                <div style={{ flex: 1, minWidth: '300px' }}>
-                    <ExpressionWidget expression="neutral" /> {/* Static for now, can be dynamic */}
+                    {/* Right Column: Expression & Medication Widget */}
+                    <div style={{ flex: 1, minWidth: '300px', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                        <ExpressionWidget expression="neutral" /> {/* Static for now */}
+                        <MedicationWidget />
+                    </div>
                 </div>
-            </div>
+            ) : (
+                <div style={{ height: 'calc(100vh - 200px)', paddingBottom: '2rem' }}>
+                    <MedicationCalendar />
+                </div>
+            )}
         </div>
     );
 };

@@ -1,9 +1,10 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { User, Activity, Calendar, Settings, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export const Header: React.FC = () => {
-  const navigate = useNavigate();
+  const { currentUser, logout } = useAuth();
 
   const linkStyle = ({ isActive }: { isActive: boolean }) => ({
     display: 'flex',
@@ -17,11 +18,6 @@ export const Header: React.FC = () => {
     background: isActive ? 'var(--color-primary-light)' : 'transparent',
     transition: 'all 0.2s'
   });
-
-  const handleLogout = () => {
-    // In a real app, clear auth tokens here
-    navigate('/login');
-  };
 
   return (
     <header style={{
@@ -65,40 +61,28 @@ export const Header: React.FC = () => {
         </NavLink>
       </nav>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontWeight: 600 }}>Hiro Hamada</div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Patient ID: #84920</div>
-          </div>
-          <div style={{
-            background: 'rgba(59, 130, 246, 0.1)',
-            padding: '0.5rem',
-            borderRadius: '50%',
-            color: 'var(--color-primary)'
-          }}>
-            <User size={20} />
-          </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontWeight: 600 }}>{currentUser?.email?.split('@')[0]}</div>
+          <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Patient ID: #{currentUser?.id?.slice(0, 5)}</div>
         </div>
-
-        <div style={{ height: '24px', width: '1px', background: 'var(--glass-border)' }}></div>
-
         <button
-          onClick={handleLogout}
+          onClick={logout}
           style={{
-            background: 'transparent',
+            background: 'var(--color-primary-light)',
+            borderRadius: '50%',
             border: 'none',
-            color: 'var(--text-secondary)',
+            color: 'var(--color-primary)',
             cursor: 'pointer',
             padding: '0.5rem',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem',
+            justifyContent: 'center',
             transition: 'color 0.2s',
             boxShadow: 'none'
           }}
           onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-danger)'}
-          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-primary)'}
           title="Sign Out"
         >
           <LogOut size={20} />

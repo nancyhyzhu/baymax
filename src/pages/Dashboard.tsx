@@ -1,44 +1,66 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { getReadings, Reading } from '../services/db';
 import { GraphCard } from '../components/GraphCard';
 import { ExpressionWidget } from '../components/ExpressionWidget';
 import { AtypicalWarningModal } from '../components/AtypicalWarningModal';
-import { generateWeeklyData, generateMonthlyData, DataPoint } from '../utils/dataUtils';
+import { DataPoint } from '../utils/dataUtils'; // Keep type, ignore gen functions
 import { Bell } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
+    const { currentUser } = useAuth();
     const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
     const [hrData, setHrData] = useState<DataPoint[]>([]);
     const [brData, setBrData] = useState<DataPoint[]>([]);
     const [showWarning, setShowWarning] = useState(false);
     const [atypicalMetrics, setAtypicalMetrics] = useState<string[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    // Load Initial Data
+    // Load Data from Firestore
     useEffect(() => {
-        const newData = viewMode === 'weekly'
-            ? generateWeeklyData(75, 20)
-            : generateMonthlyData(78, 15);
+        const fetchData = async () => {
+            if (!currentUser) return;
+            setLoading(true);
 
-        const newBrData = viewMode === 'weekly'
-            ? generateWeeklyData(18, 5)
-            : generateMonthlyData(18, 5);
+            const days = viewMode === 'weekly' ? 7 : 30;
+            const readings = await getReadings(currentUser.id, days);
 
-        setHrData(newData);
-        setBrData(newBrData);
+            // Transform Firestore data to Graph format
+            const transformedHr = readings.map(r => ({
+                time: r.timestamp.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' }),
+                value: r.heartRate,
+                status: (r.heartRate > 100 || r.heartRate < 60) ? 'atypical' : 'typical'
+            }));
 
-        // Calculate atypical metrics for the widget/button, but don't auto-show modal here
-        const atypicalList: string[] = ['Heart Rate', 'Respiration Rate'];
-        if (atypicalList.length > 0) {
-            setAtypicalMetrics(atypicalList);
-        }
+            const transformedBr = readings.map(r => ({
+                time: r.timestamp.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric' }),
+                value: r.breathing,
+                status: (r.breathing > 25 || r.breathing < 12) ? 'atypical' : 'typical'
+            }));
 
-    }, [viewMode]);
+            setHrData(transformedHr as any); // Type cast for quick fix on DataPoint mismatch
+            setBrData(transformedBr as any);
+
+            // Check for atypical stats
+            const atypicalList: string[] = [];
+            if (transformedHr.some(d => d.status === 'atypical')) atypicalList.push('Heart Rate');
+            if (transformedBr.some(d => d.status === 'atypical')) atypicalList.push('Respiration Rate');
+
+            if (atypicalList.length > 0) {
+                setAtypicalMetrics(atypicalList);
+                setShowWarning(true);
+            }
+            setLoading(false);
+        };
+
+        fetchData();
+    }, [currentUser, viewMode]);
 
     // Handle initial alert on login
     const location = useLocation();
     useEffect(() => {
         if (location.state?.justLoggedIn) {
-            setShowWarning(true);
             // Clear the state so it doesn't reappear on refresh
             window.history.replaceState({}, document.title);
         }
@@ -68,23 +90,24 @@ export const Dashboard: React.FC = () => {
             {/* Controls */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem' }}>
                 <button
-                    onClick={() => setShowWarning(true)}
+                    onClick={() => atypicalMetrics.length > 0 && setShowWarning(true)}
                     style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.5rem',
                         padding: '0.5rem 1rem',
-                        background: 'rgba(239, 68, 68, 0.1)',
-                        color: 'var(--color-danger)',
-                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        background: atypicalMetrics.length > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(128, 128, 128, 0.1)',
+                        color: atypicalMetrics.length > 0 ? 'var(--color-danger)' : 'var(--text-secondary)',
+                        border: atypicalMetrics.length > 0 ? '1px solid rgba(239, 68, 68, 0.2)' : '1px solid rgba(128, 128, 128, 0.2)',
                         borderRadius: '8px',
                         fontSize: '0.9rem',
                         fontWeight: 600,
-                        cursor: 'pointer'
+                        cursor: atypicalMetrics.length > 0 ? 'pointer' : 'default',
+                        opacity: atypicalMetrics.length > 0 ? 1 : 0.7
                     }}
                 >
                     <Bell size={16} />
-                    Show Alerts
+                    {atypicalMetrics.length > 0 ? 'Show Alerts' : 'No Alerts'}
                 </button>
 
                 <div className="glass-panel" style={{ display: 'flex', padding: '0.25rem', gap: '0.25rem' }}>

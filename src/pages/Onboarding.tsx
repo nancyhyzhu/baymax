@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import './Auth.css';
 
 export const Onboarding: React.FC = () => {
@@ -77,7 +79,10 @@ export const Onboarding: React.FC = () => {
         if (step > 1) setStep(step - 1);
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const { currentUser } = useAuth();
+    const [updating, setUpdating] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         // Final step validation just in case
@@ -86,8 +91,35 @@ export const Onboarding: React.FC = () => {
             return;
         }
 
-        console.log('Onboarding data:', formData);
-        navigate('/dashboard', { state: { justLoggedIn: true } });
+        if (!currentUser) return;
+        setUpdating(true);
+
+        try {
+            const updates = {
+                age: parseInt(formData.age),
+                sex: formData.sex,
+                height: formData.height + " cm",
+                weight: formData.weight + " kg",
+                conditions: formData.hasConditions === 'yes' ? formData.conditionDetails : 'None',
+                medications: formData.takesMedication === 'yes' ? medications.map(m => `${m.name} (${m.frequency})`).join(', ') : 'None',
+                caretaker_name: formData.caretakerName,
+                caretaker_phone: formData.caretakerPhone,
+                updated_at: new Date().toISOString(),
+            };
+
+            const { error } = await supabase
+                .from('profiles')
+                .update(updates)
+                .eq('id', currentUser.id);
+
+            if (error) throw error;
+
+            navigate('/', { state: { justLoggedIn: true } });
+        } catch (error: any) {
+            setError(error.message);
+        } finally {
+            setUpdating(false);
+        }
     };
 
     // Calculate progress percentage

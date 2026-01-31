@@ -1,29 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Share2, Smartphone, CheckSquare } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { getTodaySession, Reading } from '../services/db';
+import { supabase } from '../lib/supabase';
 
 export const DailySession: React.FC = () => {
-    const [hasSessionData, setHasSessionData] = useState(false);
+    const { currentUser } = useAuth();
+    const [sessionData, setSessionData] = useState<Reading | null>(null);
+    const [loading, setLoading] = useState(true);
     const [notifyCaretaker, setNotifyCaretaker] = useState(true);
 
-    // Mock Session Data
-    const sessionStats = {
-        heartRate: { avg: 72, high: 85, low: 65 },
-        breathing: { avg: 16, high: 20, low: 14 },
-        mood: 'Calm'
-    };
+    useEffect(() => {
+        const fetchSession = async () => {
+            if (currentUser) {
+                const data = await getTodaySession(currentUser.id);
+                setSessionData(data);
+                setLoading(false);
+            }
+        };
+        fetchSession();
+    }, [currentUser]);
 
-    const handleStartCheckIn = () => {
-        // Simulate mobile check-in
-        setTimeout(() => {
-            setHasSessionData(true);
-        }, 1000);
+    const handleStartCheckIn = async () => {
+        if (!currentUser) return;
+
+        // Create a new reading (simulate a workout/session)
+        const newReading = {
+            user_id: currentUser.id,
+            heart_rate: 75 + Math.floor(Math.random() * 10),
+            breathing: 16 + Math.floor(Math.random() * 4),
+            mood: 'Calm',
+            timestamp: new Date().toISOString()
+        };
+
+        const { error } = await supabase.from('readings').insert([newReading]);
+
+        if (!error) {
+            // Refresh local state
+            const refreshed = await getTodaySession(currentUser.id);
+            setSessionData(refreshed);
+        }
     };
 
     const handleShare = () => {
         alert(`Session Report sent to Caretaker.\nAuto-notify is ${notifyCaretaker ? 'ON' : 'OFF'}.`);
     };
 
-    if (!hasSessionData) {
+    if (loading) return <div style={{ padding: '2rem' }}>Checking for daily sessions...</div>;
+
+    if (!sessionData) {
         return (
             <div className="glass-panel" style={{
                 padding: '3rem',
@@ -43,7 +68,7 @@ export const DailySession: React.FC = () => {
                 </div>
                 <h2>No Session Data for Today</h2>
                 <p style={{ opacity: 0.7, maxWidth: '400px', marginBottom: '2rem' }}>
-                    You haven't completed your daily check-in yet. Please open the Baymax Mobile App on your phone to start recording your session.
+                    You haven't completed your daily check-in yet. Click below to simulate a session or use the mobile app.
                 </p>
                 <button className="primary-btn" onClick={handleStartCheckIn}>
                     Start Check-in (Simulator)
@@ -51,6 +76,12 @@ export const DailySession: React.FC = () => {
             </div>
         );
     }
+
+    // Calculate simulated high/low stats based on the single reading for display
+    const stats = {
+        hr: { avg: sessionData.heartRate, high: sessionData.heartRate + 12, low: sessionData.heartRate - 8 },
+        br: { avg: sessionData.breathing, high: sessionData.breathing + 4, low: sessionData.breathing - 2 }
+    };
 
     return (
         <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
@@ -65,15 +96,15 @@ export const DailySession: React.FC = () => {
                     <h3 style={{ margin: '0 0 1rem 0', color: '#ef4444' }}>Heart Rate</h3>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                         <span style={{ opacity: 0.7 }}>Average</span>
-                        <strong>{sessionStats.heartRate.avg} BPM</strong>
+                        <strong>{stats.hr.avg} BPM</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                         <span style={{ opacity: 0.7 }}>Highest</span>
-                        <strong>{sessionStats.heartRate.high} BPM</strong>
+                        <strong>{stats.hr.high} BPM</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ opacity: 0.7 }}>Lowest</span>
-                        <strong>{sessionStats.heartRate.low} BPM</strong>
+                        <strong>{stats.hr.low} BPM</strong>
                     </div>
                 </div>
 
@@ -82,23 +113,23 @@ export const DailySession: React.FC = () => {
                     <h3 style={{ margin: '0 0 1rem 0', color: '#3b82f6' }}>Breathing</h3>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                         <span style={{ opacity: 0.7 }}>Average</span>
-                        <strong>{sessionStats.breathing.avg} bpm</strong>
+                        <strong>{stats.br.avg} bpm</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
                         <span style={{ opacity: 0.7 }}>Highest</span>
-                        <strong>{sessionStats.breathing.high} bpm</strong>
+                        <strong>{stats.br.high} bpm</strong>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ opacity: 0.7 }}>Lowest</span>
-                        <strong>{sessionStats.breathing.low} bpm</strong>
+                        <strong>{stats.br.low} bpm</strong>
                     </div>
                 </div>
 
                 {/* Overall Mood */}
                 <div style={{ background: 'rgba(255,255,255,0.5)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(80,80,80,0.05)' }}>
                     <h3 style={{ margin: '0 0 1rem 0', color: '#10b981' }}>Mood Analysis</h3>
-                    <div style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-                        {sessionStats.mood}
+                    <div style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'capitalize' }}>
+                        {sessionData.mood}
                     </div>
                     <p style={{ margin: 0, opacity: 0.7, fontSize: '0.9rem' }}>
                         Patient appeared stable and relaxed throughout the session.

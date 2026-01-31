@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { GraphCard } from '../components/GraphCard';
 import { ExpressionWidget } from '../components/ExpressionWidget';
 import { AtypicalWarningModal } from '../components/AtypicalWarningModal';
@@ -7,8 +7,11 @@ import { MedicationWidget } from '../components/MedicationWidget';
 import { MedicationCalendar } from '../components/MedicationCalendar';
 import { generateWeeklyData, generateMonthlyData, DataPoint } from '../utils/dataUtils';
 import { Bell, Calendar as CalendarIcon } from 'lucide-react';
+import { useUser } from '../context/UserContext';
 
 export const Dashboard: React.FC = () => {
+    const { profile } = useUser();
+    const navigate = useNavigate();
     const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
     const [activeTab, setActiveTab] = useState<'overview' | 'medications'>('overview');
 
@@ -49,7 +52,19 @@ export const Dashboard: React.FC = () => {
     }, [location]);
 
     const handleNotify = () => {
-        alert('Caretaker notified successfully!'); // Mock notification
+        // Check if caretaker exists
+        if (!profile.caretakerName || !profile.caretakerPhone) {
+            const shouldAddCaretaker = window.confirm(
+                'No caretaker contact found. Would you like to add one now?'
+            );
+            if (shouldAddCaretaker) {
+                navigate('/settings');
+            }
+            setShowWarning(false);
+            return;
+        }
+
+        alert(`Caretaker ${profile.caretakerName} (${profile.caretakerPhone}) notified successfully!`);
         setShowWarning(false);
     };
 
@@ -66,6 +81,7 @@ export const Dashboard: React.FC = () => {
                     atypicalStats={atypicalMetrics}
                     onNotify={handleNotify}
                     onClose={() => setShowWarning(false)}
+                    hasCaretaker={!!(profile.caretakerName && profile.caretakerPhone)}
                 />
             )}
 

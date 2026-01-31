@@ -1,9 +1,13 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { User, Activity, Calendar, Settings, LogOut } from 'lucide-react';
+import { useUser } from '../context/UserContext';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase';
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
+  const { profile } = useUser();
 
   const linkStyle = ({ isActive }: { isActive: boolean }) => ({
     display: 'flex',
@@ -18,9 +22,14 @@ export const Header: React.FC = () => {
     transition: 'all 0.2s'
   });
 
-  const handleLogout = () => {
-    // In a real app, clear auth tokens here
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      navigate('/login');
+    }
   };
 
   return (
@@ -34,9 +43,9 @@ export const Header: React.FC = () => {
 
       {/* ... Logo section unchanged ... */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <img 
-          src="/logo (1).png" 
-          alt="Baymax" 
+        <img
+          src="/logo (1).png"
+          alt="Baymax"
           style={{
             width: '40px',
             height: '40px',
@@ -66,8 +75,7 @@ export const Header: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontWeight: 600 }}>Hiro Hamada</div>
-            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Patient ID: #84920</div>
+            <div style={{ fontWeight: 600 }}>{profile.name || 'Guest'}</div>
           </div>
           <div style={{
             background: 'rgba(59, 130, 246, 0.1)',

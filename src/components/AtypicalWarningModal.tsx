@@ -1,13 +1,19 @@
 import React from 'react';
-import { AlertTriangle, Bell, X } from 'lucide-react';
+import { AlertTriangle, Bell, X, UserPlus } from 'lucide-react';
 
 interface AtypicalWarningModalProps {
     onClose: () => void;
     onNotify: () => void;
     atypicalStats: string[];
+    hasCaretaker?: boolean;
 }
 
-export const AtypicalWarningModal: React.FC<AtypicalWarningModalProps> = ({ onClose, onNotify, atypicalStats }) => {
+export const AtypicalWarningModal: React.FC<AtypicalWarningModalProps> = ({
+    onClose,
+    onNotify,
+    atypicalStats,
+    hasCaretaker = true
+}) => {
     return (
         <div style={{
             position: 'fixed',
@@ -47,7 +53,10 @@ export const AtypicalWarningModal: React.FC<AtypicalWarningModalProps> = ({ onCl
                 </p>
 
                 <p style={{ fontSize: '0.9rem', opacity: 0.7, marginBottom: '2rem' }}>
-                    Would you like to notify your listed caretaker immediately?
+                    {hasCaretaker
+                        ? 'Would you like to notify your listed caretaker immediately?'
+                        : 'You have not added a caretaker contact yet. Would you like to add one now?'
+                    }
                 </p>
 
                 <div style={{ display: 'flex', gap: '1rem' }}>
@@ -56,8 +65,17 @@ export const AtypicalWarningModal: React.FC<AtypicalWarningModalProps> = ({ onCl
                         style={{ flex: 1, background: '#ef4444', color: 'white', display: 'flex', justifyContent: 'center', gap: '0.5rem' }}
                         onClick={onNotify}
                     >
-                        <Bell size={18} />
-                        Notify Caretaker
+                        {hasCaretaker ? (
+                            <>
+                                <Bell size={18} />
+                                Notify Caretaker
+                            </>
+                        ) : (
+                            <>
+                                <UserPlus size={18} />
+                                Add Caretaker
+                            </>
+                        )}
                     </button>
                     <button
                         onClick={onClose}

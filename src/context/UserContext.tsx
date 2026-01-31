@@ -2,7 +2,11 @@ import React, { createContext, useContext } from 'react';
 
 // Define the shape of our context state
 interface UserContextType {
-    // Profile Data (migrated from Settings.tsx local state)
+    // Auth State
+    user: any | null; // Firebase User object
+    loading: boolean;
+
+    // Profile Data
     profile: {
         name: string;
         age: number;
@@ -14,21 +18,21 @@ interface UserContextType {
         caretakerPhone: string;
         email: string;
     };
-    updateProfile: (updates: Partial<UserContextType['profile']>) => void;
+    updateProfile: (updates: Partial<UserContextType['profile']>) => Promise<void>;
 
     // Medication Data
-    medications: string[]; // List of available medications
-    addMedication: (med: string) => void;
-    removeMedication: (med: string) => void;
+    medications: string[]; // List of available medications (Derived from schedule/db)
+    addMedication: (med: string) => Promise<void>;
+    removeMedication: (med: string) => Promise<void>;
 
     // Schedule: Day -> List of medications
     schedule: Record<string, string[]>;
-    addToSchedule: (day: string, med: string) => void;
-    removeFromSchedule: (day: string, med: string, index: number) => void;
+    addToSchedule: (day: string, med: string) => Promise<void>;
+    removeFromSchedule: (day: string, med: string, index: number) => Promise<void>;
 
     // Taken Status
     takenRecords: Record<string, boolean>;
-    toggleTaken: (recordId: string) => void;
+    toggleTaken: (recordId: string) => Promise<void>;
 }
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);

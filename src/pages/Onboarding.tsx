@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { auth, db } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import './Auth.css';
 import './Onboarding.css';
 
@@ -37,7 +39,7 @@ export const Onboarding: React.FC = () => {
     const [error, setError] = useState('');
     const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
     const [errorStep, setErrorStep] = useState<number | null>(null);
-    
+
     // Force clear error on mount to prevent any stale errors from showing
     useEffect(() => {
         setError('');
@@ -70,7 +72,7 @@ export const Onboarding: React.FC = () => {
     const handleNext = () => {
         // Set attempt flag for current step validation
         setHasAttemptedSubmit(true);
-        
+
         // Validation logic
         if (step === 1) {
             if (!formData.age || !formData.sex || !formData.height || !formData.weight) {
@@ -108,12 +110,12 @@ export const Onboarding: React.FC = () => {
 
         // Don't validate step 4 in handleNext - step 4 uses handleSubmit instead
         // This prevents errors from showing when navigating to step 4
-        
+
         // Validation passed - clear ALL error state BEFORE moving to next step
         setError('');
         setHasAttemptedSubmit(false);
         setErrorStep(null);
-        
+
         // Move to next step - useEffect will clear these again as a backup
         if (step < totalSteps) {
             setStep(step + 1);
@@ -129,31 +131,67 @@ export const Onboarding: React.FC = () => {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-    
+
         // ONLY validate Step 4 logic if we are actually on Step 4
         if (step === 4) {
             setHasAttemptedSubmit(true);
-    
+
             if (!formData.hasCaretaker) {
                 setError('Please fill out all required fields');
                 setErrorStep(4);
                 return;
             }
-    
+
             if (formData.hasCaretaker === 'yes' && (!formData.caretakerName || !formData.caretakerPhone)) {
                 setError('Please fill out all required fields');
                 setErrorStep(4);
                 return;
             }
-    
-            // If validation passes
+
+            // If validation passes, save to Firestore
             setError('');
             setHasAttemptedSubmit(false);
             setErrorStep(null);
-            console.log('Onboarding data:', formData);
-            navigate('/dashboard', { state: { justLoggedIn: true } });
+
+            try {
+                const user = auth.currentUser;
+                if (!user) {
+                    setError('Not authenticated. Please log in again.');
+                    return;
+                }
+
+                // Save user profile to Firestore
+                await setDoc(doc(db, 'users', user.uid), {
+                    name: user.displayName || '',
+                    age: parseInt(formData.age) || 0,
+                    height: formData.height,
+                    weight: formData.weight,
+                    sex: formData.sex,
+                    conditions: formData.hasConditions === 'yes' ? formData.conditionDetails : 'None',
+                    caretakerName: formData.hasCaretaker === 'yes' ? formData.caretakerName : '',
+                    caretakerPhone: formData.hasCaretaker === 'yes' ? formData.caretakerPhone : '',
+                    email: user.email || ''
+                });
+
+                // Save medications to Firestore (if any)
+                if (formData.takesMedication === 'yes' && medications.length > 0) {
+                    for (const med of medications) {
+                        await setDoc(doc(db, 'medications', `${user.uid}_${med.name}`), {
+                            userId: user.uid,
+                            name: med.name,
+                            schedule: [], // Will be populated later via calendar
+                            takenHistory: {}
+                        });
+                    }
+                }
+
+                navigate('/dashboard', { state: { justLoggedIn: true } });
+            } catch (err) {
+                console.error('Error saving onboarding data:', err);
+                setError('Failed to save your information. Please try again.');
+            }
         }
     };
 
@@ -211,7 +249,7 @@ export const Onboarding: React.FC = () => {
         if (!med.frequency || !med.time) {
             return;
         }
-        const updatedMedications = medications.map((med, i) => 
+        const updatedMedications = medications.map((med, i) =>
             i === index ? { ...med, reminder: !med.reminder } : med
         );
         setMedications(updatedMedications);
@@ -228,7 +266,7 @@ export const Onboarding: React.FC = () => {
                             <span className="progress-percentage">{Math.round(progress)}%</span>
                         </div>
                         <div className="progress-bar-wrapper">
-                            <div 
+                            <div
                                 className="progress-bar-fill"
                                 style={{ width: `${progress}%` }}
                             ></div>
@@ -619,12 +657,12 @@ export const Onboarding: React.FC = () => {
                         {/* Navigation Buttons */}
                         <div className="onboarding-navigation">
                             {/* Error Message - only show if error exists, user attempted submit, and we're on the step where error occurred */}
-                            {error && 
-                             error.trim() !== '' && 
-                             hasAttemptedSubmit === true && 
-                             errorStep !== null && 
-                             typeof errorStep === 'number' && 
-                             errorStep === step ? (
+                            {error &&
+                                error.trim() !== '' &&
+                                hasAttemptedSubmit === true &&
+                                errorStep !== null &&
+                                typeof errorStep === 'number' &&
+                                errorStep === step ? (
                                 <div className="error-message onboarding-error">
                                     {error}
                                 </div>

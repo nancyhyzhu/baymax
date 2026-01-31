@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserOutlined, MailOutlined, LockOutlined } from '@ant-design/icons';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth } from '../firebase';
 import './Auth.css';
 
 export const CreateAccount: React.FC = () => {
@@ -21,7 +23,7 @@ export const CreateAccount: React.FC = () => {
         setError('');
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
@@ -41,12 +43,27 @@ export const CreateAccount: React.FC = () => {
             return;
         }
 
-        // TODO: Add actual registration logic here
-        console.log('Registration attempt:', formData);
+        try {
+            // Create user account
+            const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
 
-        // Simulate successful registration
-        alert('Account created! Let\'s set up your profile.');
-        navigate('/onboarding');
+            // Update display name
+            await updateProfile(userCredential.user, {
+                displayName: formData.fullName
+            });
+
+            // Navigate to onboarding
+            navigate('/onboarding');
+        } catch (err: any) {
+            console.error('Registration error:', err);
+            if (err.code === 'auth/email-already-in-use') {
+                setError('Email already in use');
+            } else if (err.code === 'auth/weak-password') {
+                setError('Password is too weak');
+            } else {
+                setError('Failed to create account. Please try again.');
+            }
+        }
     };
 
     return (

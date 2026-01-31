@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { LockOutlined, MailOutlined } from '@ant-design/icons';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase';
 import './Auth.css';
 
 export const Login: React.FC = () => {
@@ -19,23 +21,23 @@ export const Login: React.FC = () => {
         setError('');
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
-        // Basic validation
         if (!formData.email || !formData.password) {
             setError('Please fill in all fields');
             return;
         }
 
-        // TODO: Add actual authentication logic here
-        console.log('Login attempt:', formData);
-
-        // Simulate successful login
-        // set success state or redirect
-        alert('Login successful! (This is a demo)');
-        navigate('/dashboard', { state: { justLoggedIn: true } });
+        try {
+            await signInWithEmailAndPassword(auth, formData.email, formData.password);
+            // On success, redirect
+            navigate('/dashboard', { state: { justLoggedIn: true } });
+        } catch (err: any) {
+            console.error('Login error:', err);
+            setError('Failed to login. Please check your credentials.');
+        }
     };
 
     return (

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { UserOutlined, MailOutlined, LockOutlined } from '@ant-design/icons';
 import './Auth.css';
 
 export const CreateAccount: React.FC = () => {
@@ -61,8 +62,7 @@ export const CreateAccount: React.FC = () => {
                 <div className="auth-card">
                     <div className="auth-header">
                         <div className="logo-container">
-                            <div className="logo-icon">Baymax</div>
-                            <span className="logo-text" style={{ fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--text-main)' }}>Baymax</span>
+                            <img src="/logo (1).png" alt="Baymax" className="logo-icon" />
                         </div>
                         <h2>Create Account</h2>
                         <p className="welcome-text">Fill in your details to create your account.</p>
@@ -71,7 +71,7 @@ export const CreateAccount: React.FC = () => {
                     <form onSubmit={handleSubmit} className="auth-form">
                         {error && <div className="error-message">{error}</div>}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                             <div className="form-group">
                                 <label htmlFor="fullName">Full Name</label>
                                 <div className="input-wrapper">
@@ -84,7 +84,7 @@ export const CreateAccount: React.FC = () => {
                                         placeholder="John Doe"
                                         required
                                     />
-                                    <span className="input-icon">👤</span>
+                                    <UserOutlined className="input-icon" />
                                 </div>
                             </div>
 
@@ -100,12 +100,12 @@ export const CreateAccount: React.FC = () => {
                                         placeholder="john@example.com"
                                         required
                                     />
-                                    <span className="input-icon">✉</span>
+                                    <MailOutlined className="input-icon" />
                                 </div>
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
                             <div className="form-group">
                                 <label htmlFor="password">Password</label>
                                 <div className="input-wrapper">
@@ -118,7 +118,7 @@ export const CreateAccount: React.FC = () => {
                                         placeholder="Password"
                                         required
                                     />
-                                    <span className="input-icon">🔒</span>
+                                    <LockOutlined className="input-icon" />
                                 </div>
                             </div>
 
@@ -134,7 +134,7 @@ export const CreateAccount: React.FC = () => {
                                         placeholder="Confirm"
                                         required
                                     />
-                                    <span className="input-icon">🔒</span>
+                                    <LockOutlined className="input-icon" />
                                 </div>
                             </div>
                         </div>

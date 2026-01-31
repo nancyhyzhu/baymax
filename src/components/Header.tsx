@@ -34,17 +34,15 @@ export const Header: React.FC = () => {
 
       {/* ... Logo section unchanged ... */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{
-          background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
-          borderRadius: '50%',
-          padding: '0.5rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 10px rgba(59, 130, 246, 0.3)'
-        }}>
-          <Activity size={24} color="white" />
-        </div>
+        <img 
+          src="/logo (1).png" 
+          alt="Baymax" 
+          style={{
+            width: '40px',
+            height: '40px',
+            objectFit: 'contain'
+          }}
+        />
         <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--text-main)' }}>
           Baymax <span style={{ opacity: 0.5, fontWeight: 400 }}>Health Monitor</span>
         </h1>

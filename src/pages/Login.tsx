@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { LockOutlined, MailOutlined } from '@ant-design/icons';
 import './Auth.css';
 
 export const Login: React.FC = () => {
@@ -50,8 +51,7 @@ export const Login: React.FC = () => {
                 <div className="auth-card">
                     <div className="auth-header">
                         <div className="logo-container">
-                            <div className="logo-icon">Baymax</div>
-                            <span className="logo-text" style={{ fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--text-main)' }}>Baymax</span>
+                            <img src="/logo (1).png" alt="Baymax" className="logo-icon" />
                         </div>
                         <h2>Welcome Back</h2>
                         <p className="welcome-text">Please enter your details to sign in.</p>
@@ -72,7 +72,7 @@ export const Login: React.FC = () => {
                                     placeholder="Enter your email"
                                     required
                                 />
-                                <span className="input-icon">✉</span>
+                                <MailOutlined className="input-icon" />
                             </div>
                         </div>
 
@@ -88,7 +88,7 @@ export const Login: React.FC = () => {
                                     placeholder="••••••••"
                                     required
                                 />
-                                <span className="input-icon">🔒</span>
+                                <LockOutlined className="input-icon" />
                             </div>
                         </div>
 

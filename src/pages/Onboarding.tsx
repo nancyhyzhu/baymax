@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import './Auth.css';
+import './Onboarding.css';
 
 export const Onboarding: React.FC = () => {
     const navigate = useNavigate();
@@ -14,6 +15,7 @@ export const Onboarding: React.FC = () => {
         hasConditions: '',
         conditionDetails: '',
         takesMedication: '',
+        hasCaretaker: '',
         caretakerName: '',
         caretakerPhone: ''
     });
@@ -27,67 +29,132 @@ export const Onboarding: React.FC = () => {
 
     const [currentMedication, setCurrentMedication] = useState({
         name: '',
-        frequency: 'daily',
+        frequency: '',
         time: '',
         reminder: false
     });
 
     const [error, setError] = useState('');
+    const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+    const [errorStep, setErrorStep] = useState<number | null>(null);
+    
+    // Force clear error on mount to prevent any stale errors from showing
+    useEffect(() => {
+        setError('');
+        setHasAttemptedSubmit(false);
+        setErrorStep(null);
+    }, []);
 
-    const totalSteps = 3;
+    const totalSteps = 4;
+
+    // Clear error and submission attempt when step changes
+    useEffect(() => {
+        setError('');
+        setHasAttemptedSubmit(false);
+        setErrorStep(null);
+    }, [step]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         setFormData({
             ...formData,
             [e.target.name]: e.target.value
         });
-        setError(''); // Clear error on change
+        // Clear error when user starts fixing fields - this provides immediate feedback
+        if (error && hasAttemptedSubmit && errorStep === step) {
+            setError('');
+            setErrorStep(null);
+            setHasAttemptedSubmit(false);
+        }
     };
 
     const handleNext = () => {
+        // Set attempt flag for current step validation
+        setHasAttemptedSubmit(true);
+        
         // Validation logic
         if (step === 1) {
-            if (!formData.age || !formData.height || !formData.weight) {
+            if (!formData.age || !formData.sex || !formData.height || !formData.weight) {
                 setError('Please fill out all required fields');
+                setErrorStep(step);
                 return;
             }
         }
 
         if (step === 2) {
-            if (!formData.hasConditions || !formData.takesMedication) {
+            if (!formData.hasConditions) {
                 setError('Please fill out all required fields');
+                setErrorStep(step);
                 return;
             }
             if (formData.hasConditions === 'yes' && !formData.conditionDetails) {
                 setError('Please provide details about your conditions');
+                setErrorStep(step);
+                return;
+            }
+        }
+
+        if (step === 3) {
+            if (!formData.takesMedication) {
+                setError('Please fill out all required fields');
+                setErrorStep(step);
                 return;
             }
             if (formData.takesMedication === 'yes' && medications.length === 0) {
                 setError('Please add at least one medication');
+                setErrorStep(step);
                 return;
             }
         }
 
+        // Don't validate step 4 in handleNext - step 4 uses handleSubmit instead
+        // This prevents errors from showing when navigating to step 4
+        
+        // Validation passed - clear ALL error state BEFORE moving to next step
         setError('');
-        if (step < totalSteps) setStep(step + 1);
+        setHasAttemptedSubmit(false);
+        setErrorStep(null);
+        
+        // Move to next step - useEffect will clear these again as a backup
+        if (step < totalSteps) {
+            setStep(step + 1);
+        }
     };
 
     const handleBack = () => {
         setError('');
-        if (step > 1) setStep(step - 1);
+        setHasAttemptedSubmit(false);
+        setErrorStep(null);
+        if (step > 1) {
+            setStep(step - 1);
+        }
     };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
-        // Final step validation just in case
-        if (!formData.caretakerName || !formData.caretakerPhone) {
-            setError('Please fill out all required fields');
-            return;
+    
+        // ONLY validate Step 4 logic if we are actually on Step 4
+        if (step === 4) {
+            setHasAttemptedSubmit(true);
+    
+            if (!formData.hasCaretaker) {
+                setError('Please fill out all required fields');
+                setErrorStep(4);
+                return;
+            }
+    
+            if (formData.hasCaretaker === 'yes' && (!formData.caretakerName || !formData.caretakerPhone)) {
+                setError('Please fill out all required fields');
+                setErrorStep(4);
+                return;
+            }
+    
+            // If validation passes
+            setError('');
+            setHasAttemptedSubmit(false);
+            setErrorStep(null);
+            console.log('Onboarding data:', formData);
+            navigate('/dashboard', { state: { justLoggedIn: true } });
         }
-
-        console.log('Onboarding data:', formData);
-        navigate('/dashboard', { state: { justLoggedIn: true } });
     };
 
     // Calculate progress percentage
@@ -100,13 +167,18 @@ export const Onboarding: React.FC = () => {
     );
 
     const handleAddMedication = () => {
-        if (!currentMedication.name || !currentMedication.time) {
-            setError('Please fill in medication name and time');
+        if (!currentMedication.name) {
+            setError('Please fill in medication name');
+            setErrorStep(step);
+            setHasAttemptedSubmit(true);
             return;
         }
+        // Time is optional, so we don't validate it
         setMedications([...medications, currentMedication]);
-        setCurrentMedication({ name: '', frequency: 'daily', time: '', reminder: false });
+        setCurrentMedication({ name: '', frequency: '', time: '', reminder: false });
         setError('');
+        setErrorStep(null);
+        setHasAttemptedSubmit(false);
     };
 
     const handleDeleteMedication = (index: number) => {
@@ -114,176 +186,169 @@ export const Onboarding: React.FC = () => {
     };
 
     const handleCurrentMedicationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setCurrentMedication({
+        const target = e.target;
+        const value = target.type === 'checkbox' ? (target as HTMLInputElement).checked : target.value;
+        const updatedMedication = {
             ...currentMedication,
-            [e.target.name]: e.target.value
-        });
-        setError('');
+            [target.name]: value
+        };
+        // If frequency or time is cleared, disable reminder
+        if ((target.name === 'frequency' || target.name === 'time') && !value) {
+            updatedMedication.reminder = false;
+        }
+        setCurrentMedication(updatedMedication);
+        // Clear error when user is fixing medication input
+        if (error) {
+            setError('');
+            setErrorStep(null);
+            setHasAttemptedSubmit(false);
+        }
+    };
+
+    const handleMedicationReminderToggle = (index: number) => {
+        const med = medications[index];
+        // Only allow toggling if both frequency and time are filled
+        if (!med.frequency || !med.time) {
+            return;
+        }
+        const updatedMedications = medications.map((med, i) => 
+            i === index ? { ...med, reminder: !med.reminder } : med
+        );
+        setMedications(updatedMedications);
     };
 
     return (
-        <div className="auth-container" style={{ justifyContent: 'center', background: 'var(--bg-gradient)' }}>
-            {/* Image section removed for full-screen wizard flow */}
-
-            <div className="auth-form-section" style={{ flex: '0 1 auto', width: '100%', maxWidth: '600px', background: 'transparent' }}>
-                <div className="auth-card" style={{ maxWidth: '100%', width: '100%', padding: '2rem', boxShadow: 'none' }}>
-
+        <div className="auth-container onboarding-container">
+            <div className="auth-form-section onboarding-section">
+                <div className="auth-card onboarding-card">
                     {/* Progress Bar */}
-                    <div style={{ marginBottom: '2rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                            <span>Step {step} of {totalSteps}</span>
-                            <span>{Math.round(progress)}%</span>
+                    <div className="progress-container">
+                        <div className="progress-header">
+                            <span className="progress-step">Step {step} of {totalSteps}</span>
+                            <span className="progress-percentage">{Math.round(progress)}%</span>
                         </div>
-                        <div style={{ width: '100%', height: '6px', background: 'rgba(0,0,0,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div style={{
-                                width: `${progress}%`,
-                                height: '100%',
-                                background: 'var(--color-primary)',
-                                borderRadius: '3px',
-                                transition: 'width 0.3s ease-in-out'
-                            }}></div>
+                        <div className="progress-bar-wrapper">
+                            <div 
+                                className="progress-bar-fill"
+                                style={{ width: `${progress}%` }}
+                            ></div>
                         </div>
                     </div>
 
-                    <div className="auth-header" style={{ marginBottom: '1rem', textAlign: 'left' }}>
-                        <h2 style={{ fontSize: '1.8rem', margin: 0 }}>
+                    <div className="auth-header onboarding-header">
+                        <h2 className="onboarding-title">
                             {step === 1 && "The Basics"}
-                            {step === 2 && "Medical History"}
-                            {step === 3 && "Emergency Contact"}
+                            {step === 2 && "Diagnosis"}
+                            {step === 3 && "Medication"}
+                            {step === 4 && "Caretaker Contact"}
                         </h2>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-                            <p className="welcome-text" style={{ margin: 0 }}>
-                                {step === 1 && "Let's start with your physical stats."}
-                                {step === 2 && "Any conditions we should know about?"}
-                                {step === 3 && "Who should we call in an emergency?"}
-                            </p>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                <span style={{ color: 'var(--color-danger)' }}>*</span> indicates required field
-                            </span>
-                        </div>
+                        <p className="welcome-text onboarding-subtitle">
+                            {step === 1 && "Let's start with your physical stats."}
+                            {step === 2 && "Any conditions we should know about?"}
+                            {step === 3 && "Do you take any medication?"}
+                            {step === 4 && "Who should we call in an emergency?"}
+                        </p>
+                        <span className="required-hint">
+                            <span className="required-asterisk">*</span> indicates required field
+                        </span>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="auth-form">
-
+                    <form onSubmit={handleSubmit} className="auth-form onboarding-form">
                         {/* Step 1: Physical Stats */}
                         {step === 1 && (
-                            <div className="step-content">
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            <div className="step-content fade-in">
+                                <div className="form-grid">
                                     <div className="form-group">
                                         <label htmlFor="age"><LabelWithAsterisk>Age</LabelWithAsterisk></label>
-                                        <div className="input-wrapper">
-                                            <input
-                                                type="number"
-                                                id="age"
-                                                name="age"
-                                                value={formData.age}
-                                                onChange={handleChange}
-                                                placeholder="e.g. 25"
-                                                min="0"
-                                                onKeyDown={(e) => {
-                                                    if (e.key === '-' || e.key === 'e') {
-                                                        e.preventDefault();
-                                                    }
-                                                }}
-                                                autoFocus
-                                                required
-                                            />
-                                        </div>
+                                        <input
+                                            type="number"
+                                            id="age"
+                                            name="age"
+                                            value={formData.age}
+                                            onChange={handleChange}
+                                            placeholder="e.g. 25"
+                                            min="0"
+                                            onKeyDown={(e) => {
+                                                if (e.key === '-' || e.key === 'e') {
+                                                    e.preventDefault();
+                                                }
+                                            }}
+                                            autoFocus
+                                            required
+                                            className="form-input"
+                                        />
                                     </div>
                                     <div className="form-group">
                                         <label htmlFor="sex"><LabelWithAsterisk>Sex</LabelWithAsterisk></label>
-                                        <div className="input-wrapper">
-                                            <select
-                                                id="sex"
-                                                name="sex"
-                                                value={formData.sex}
-                                                onChange={handleChange}
-                                                required
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '0.75rem 1rem',
-                                                    border: '1px solid rgba(0, 0, 0, 0.1)',
-                                                    borderRadius: '0.75rem',
-                                                    fontSize: '0.95rem',
-                                                    background: 'rgba(255, 255, 255, 0.5)',
-                                                    color: 'var(--text-main)',
-                                                    outline: 'none'
-                                                }}
-                                            >
-                                                <option value="" disabled>Select...</option>
-                                                <option value="Male">Male</option>
-                                                <option value="Female">Female</option>
-                                                <option value="Other">Other</option>
-                                            </select>
-                                        </div>
+                                        <select
+                                            id="sex"
+                                            name="sex"
+                                            value={formData.sex}
+                                            onChange={handleChange}
+                                            required
+                                            className={`form-select ${!formData.sex ? 'placeholder-selected' : ''}`}
+                                        >
+                                            <option value="" disabled className="placeholder-option">Select...</option>
+                                            <option value="Male">Male</option>
+                                            <option value="Female">Female</option>
+                                            <option value="Other">Other</option>
+                                        </select>
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div className="form-grid form-grid-spaced">
                                     <div className="form-group">
                                         <label htmlFor="height"><LabelWithAsterisk>Height (cm)</LabelWithAsterisk></label>
-                                        <select
+                                        <input
+                                            type="number"
                                             id="height"
                                             name="height"
                                             value={formData.height}
                                             onChange={handleChange}
+                                            placeholder="e.g. 175"
+                                            min="90"
+                                            max="250"
                                             required
-                                            style={{
-                                                width: '100%',
-                                                padding: '0.75rem 1rem',
-                                                border: '1px solid rgba(0, 0, 0, 0.1)',
-                                                borderRadius: '0.75rem',
-                                                fontSize: '0.95rem',
-                                                background: 'rgba(255, 255, 255, 0.5)',
-                                                color: 'var(--text-main)',
-                                                outline: 'none'
+                                            className={`form-input ${!formData.height ? 'placeholder-time' : ''}`}
+                                            onKeyDown={(e) => {
+                                                if (e.key === '-' || e.key === 'e') {
+                                                    e.preventDefault();
+                                                }
                                             }}
-                                        >
-                                            <option value="">Select height</option>
-                                            {[...Array(161)].map((_, i) => {
-                                                const cm = i + 90; // 90-250cm range
-                                                return <option key={cm} value={cm}>{cm} cm</option>;
-                                            })}
-                                        </select>
+                                        />
                                     </div>
                                     <div className="form-group">
                                         <label htmlFor="weight"><LabelWithAsterisk>Weight (kg)</LabelWithAsterisk></label>
-                                        <select
+                                        <input
+                                            type="number"
                                             id="weight"
                                             name="weight"
                                             value={formData.weight}
                                             onChange={handleChange}
+                                            placeholder="e.g. 70"
+                                            min="20"
+                                            max="200"
                                             required
-                                            style={{
-                                                width: '100%',
-                                                padding: '0.75rem 1rem',
-                                                border: '1px solid rgba(0, 0, 0, 0.1)',
-                                                borderRadius: '0.75rem',
-                                                fontSize: '0.95rem',
-                                                background: 'rgba(255, 255, 255, 0.5)',
-                                                color: 'var(--text-main)',
-                                                outline: 'none'
+                                            className={`form-input ${!formData.weight ? 'placeholder-time' : ''}`}
+                                            onKeyDown={(e) => {
+                                                if (e.key === '-' || e.key === 'e') {
+                                                    e.preventDefault();
+                                                }
                                             }}
-                                        >
-                                            <option value="">Select weight</option>
-                                            {[...Array(181)].map((_, i) => {
-                                                const kg = i + 20; // 20-200kg range
-                                                return <option key={kg} value={kg}>{kg} kg</option>;
-                                            })}
-                                        </select>
+                                        />
                                     </div>
                                 </div>
                             </div>
                         )}
 
-                        {/* Step 2: Medical Details */}
+                        {/* Step 2: Diagnosis */}
                         {step === 2 && (
-                            <div className="step-content">
+                            <div className="step-content fade-in">
                                 {/* Diagnosed Conditions Question */}
-                                <div className="form-group">
+                                <div className="form-group medication-question">
                                     <label><LabelWithAsterisk>Do you have any diagnosed conditions?</LabelWithAsterisk></label>
-                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                    <div className="radio-group">
+                                        <label className="radio-label">
                                             <input
                                                 type="radio"
                                                 name="hasConditions"
@@ -292,9 +357,9 @@ export const Onboarding: React.FC = () => {
                                                 onChange={handleChange}
                                                 autoFocus
                                             />
-                                            Yes
+                                            <span>Yes</span>
                                         </label>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                        <label className="radio-label">
                                             <input
                                                 type="radio"
                                                 name="hasConditions"
@@ -302,54 +367,51 @@ export const Onboarding: React.FC = () => {
                                                 checked={formData.hasConditions === 'no'}
                                                 onChange={handleChange}
                                             />
-                                            No
+                                            <span>No</span>
                                         </label>
                                     </div>
                                 </div>
 
                                 {/* Conditional: Condition Details */}
                                 {formData.hasConditions === 'yes' && (
-                                    <div className="form-group">
-                                        <label htmlFor="conditionDetails"><LabelWithAsterisk>Please provide details</LabelWithAsterisk></label>
-                                        <textarea
-                                            id="conditionDetails"
-                                            name="conditionDetails"
-                                            value={formData.conditionDetails}
-                                            onChange={handleChange}
-                                            placeholder="Describe your diagnosed conditions"
-                                            rows={3}
-                                            required
-                                            style={{
-                                                width: '100%',
-                                                padding: '0.75rem',
-                                                border: '1px solid rgba(0, 0, 0, 0.1)',
-                                                borderRadius: '0.75rem',
-                                                fontSize: '0.95rem',
-                                                background: 'rgba(255, 255, 255, 0.5)',
-                                                color: 'var(--text-main)',
-                                                fontFamily: 'inherit',
-                                                resize: 'none',
-                                                outline: 'none'
-                                            }}
-                                        />
+                                    <div className="medication-section-fade">
+                                        <div className="form-group">
+                                            <label htmlFor="conditionDetails"><LabelWithAsterisk>Please provide details</LabelWithAsterisk></label>
+                                            <textarea
+                                                id="conditionDetails"
+                                                name="conditionDetails"
+                                                value={formData.conditionDetails}
+                                                onChange={handleChange}
+                                                placeholder="Describe your diagnosed conditions"
+                                                rows={3}
+                                                required
+                                                className="form-input"
+                                            />
+                                        </div>
                                     </div>
                                 )}
+                            </div>
+                        )}
 
+                        {/* Step 3: Medication */}
+                        {step === 3 && (
+                            <div className="step-content fade-in">
                                 {/* Medication Question */}
-                                <div className="form-group" style={{ marginTop: '1.5rem' }}>
+                                <div className="form-group medication-question">
                                     <label><LabelWithAsterisk>Do you take any medication?</LabelWithAsterisk></label>
-                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                    <div className="radio-group">
+                                        <label className="radio-label">
                                             <input
                                                 type="radio"
                                                 name="takesMedication"
                                                 value="yes"
                                                 checked={formData.takesMedication === 'yes'}
                                                 onChange={handleChange}
+                                                autoFocus
                                             />
-                                            Yes
+                                            <span>Yes</span>
                                         </label>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                        <label className="radio-label">
                                             <input
                                                 type="radio"
                                                 name="takesMedication"
@@ -357,44 +419,49 @@ export const Onboarding: React.FC = () => {
                                                 checked={formData.takesMedication === 'no'}
                                                 onChange={handleChange}
                                             />
-                                            No
+                                            <span>No</span>
                                         </label>
                                     </div>
                                 </div>
 
                                 {/* Conditional: Medication Details */}
                                 {formData.takesMedication === 'yes' && (
-                                    <>
+                                    <div className="medication-section-fade">
                                         {/* Medication List Table */}
                                         {medications.length > 0 && (
-                                            <div style={{ marginBottom: '1rem', border: '1px solid rgba(0,0,0,0.1)', borderRadius: '0.75rem', overflow: 'hidden' }}>
-                                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                            <div className="medication-table-wrapper">
+                                                <table className="medication-table">
                                                     <thead>
-                                                        <tr style={{ background: 'rgba(0,0,0,0.05)' }}>
-                                                            <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.85rem', fontWeight: 600 }}>Medication</th>
-                                                            <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.85rem', fontWeight: 600 }}>Frequency</th>
-                                                            <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.85rem', fontWeight: 600 }}>Time</th>
-                                                            <th style={{ padding: '0.75rem', textAlign: 'center', fontSize: '0.85rem', fontWeight: 600, width: '60px' }}>Delete</th>
+                                                        <tr>
+                                                            <th>Medication</th>
+                                                            <th>Frequency</th>
+                                                            <th>Time</th>
+                                                            <th>Notify</th>
+                                                            <th></th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         {medications.map((med, index) => (
-                                                            <tr key={index} style={{ borderTop: '1px solid rgba(0,0,0,0.05)' }}>
-                                                                <td style={{ padding: '0.75rem', fontSize: '0.9rem' }}>{med.name}</td>
-                                                                <td style={{ padding: '0.75rem', fontSize: '0.9rem', textTransform: 'capitalize' }}>{med.frequency.replace('-', ' ')}</td>
-                                                                <td style={{ padding: '0.75rem', fontSize: '0.9rem' }}>{med.time}</td>
-                                                                <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                                                            <tr key={index} className="medication-row">
+                                                                <td>{med.name || '--'}</td>
+                                                                <td className="capitalize">{med.frequency ? med.frequency.replace('-', ' ') : '--'}</td>
+                                                                <td>{med.time || '--'}</td>
+                                                                <td className="notify-cell">
+                                                                    <label className="notify-checkbox-label">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={med.reminder}
+                                                                            onChange={() => handleMedicationReminderToggle(index)}
+                                                                            disabled={!med.frequency || !med.time}
+                                                                            className="notify-checkbox"
+                                                                        />
+                                                                    </label>
+                                                                </td>
+                                                                <td className="delete-cell">
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => handleDeleteMedication(index)}
-                                                                        style={{
-                                                                            background: 'transparent',
-                                                                            border: 'none',
-                                                                            color: 'var(--color-danger)',
-                                                                            cursor: 'pointer',
-                                                                            fontSize: '1.2rem',
-                                                                            padding: '0.25rem'
-                                                                        }}
+                                                                        className="delete-medication-btn-row"
                                                                         title="Delete medication"
                                                                     >
                                                                         ×
@@ -408,24 +475,23 @@ export const Onboarding: React.FC = () => {
                                         )}
 
                                         {/* Add Medication Form */}
-                                        <div style={{ background: 'rgba(0,0,0,0.02)', padding: '1rem', borderRadius: '0.75rem', border: '1px dashed rgba(0,0,0,0.15)' }}>
-                                            <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.75rem' }}>Add Medication</div>
+                                        <div className="add-medication-form">
+                                            <div className="add-medication-title">Add Medication</div>
 
                                             <div className="form-group">
-                                                <label htmlFor="currentMedicationName">Medication Name</label>
-                                                <div className="input-wrapper">
-                                                    <input
-                                                        type="text"
-                                                        id="currentMedicationName"
-                                                        name="name"
-                                                        value={currentMedication.name}
-                                                        onChange={handleCurrentMedicationChange}
-                                                        placeholder="e.g. Aspirin"
-                                                    />
-                                                </div>
+                                                <label htmlFor="currentMedicationName"><LabelWithAsterisk>Medication Name</LabelWithAsterisk></label>
+                                                <input
+                                                    type="text"
+                                                    id="currentMedicationName"
+                                                    name="name"
+                                                    value={currentMedication.name}
+                                                    onChange={handleCurrentMedicationChange}
+                                                    placeholder="e.g. Aspirin"
+                                                    className="form-input"
+                                                />
                                             </div>
 
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                            <div className="form-grid">
                                                 <div className="form-group">
                                                     <label htmlFor="currentMedicationFrequency">Frequency</label>
                                                     <select
@@ -433,19 +499,10 @@ export const Onboarding: React.FC = () => {
                                                         name="frequency"
                                                         value={currentMedication.frequency}
                                                         onChange={handleCurrentMedicationChange}
-                                                        style={{
-                                                            width: '100%',
-                                                            padding: '0.75rem 1rem',
-                                                            border: '1px solid rgba(0, 0, 0, 0.1)',
-                                                            borderRadius: '0.75rem',
-                                                            fontSize: '0.95rem',
-                                                            background: 'rgba(255, 255, 255, 0.5)',
-                                                            color: 'var(--text-main)',
-                                                            outline: 'none'
-                                                        }}
+                                                        className={`form-select ${!currentMedication.frequency ? 'placeholder-selected' : ''}`}
                                                     >
+                                                        <option value="" className="placeholder-option">Select frequency</option>
                                                         <option value="daily">Daily</option>
-                                                        <option value="twice-daily">Twice Daily</option>
                                                         <option value="weekly">Weekly</option>
                                                         <option value="as-needed">As Needed</option>
                                                     </select>
@@ -460,119 +517,149 @@ export const Onboarding: React.FC = () => {
                                                             name="time"
                                                             value={currentMedication.time}
                                                             onChange={handleCurrentMedicationChange}
+                                                            className={`form-input ${!currentMedication.time ? 'placeholder-time' : ''}`}
                                                         />
                                                     </div>
                                                 </div>
                                             </div>
 
+                                            <div className="notify-form-group">
+                                                <input
+                                                    type="checkbox"
+                                                    name="reminder"
+                                                    id="medication-reminder"
+                                                    checked={currentMedication.reminder}
+                                                    onChange={handleCurrentMedicationChange}
+                                                    disabled={!currentMedication.frequency || !currentMedication.time}
+                                                    className="notify-checkbox"
+                                                />
+                                                <label htmlFor="medication-reminder" className="notify-checkbox-label-form">
+                                                    Notify me to take this medication
+                                                </label>
+                                            </div>
+
                                             <button
                                                 type="button"
                                                 onClick={handleAddMedication}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '0.75rem',
-                                                    background: 'var(--color-primary)',
-                                                    color: 'white',
-                                                    border: 'none',
-                                                    borderRadius: '0.75rem',
-                                                    fontSize: '0.95rem',
-                                                    fontWeight: 600,
-                                                    cursor: 'pointer',
-                                                    marginTop: '0.5rem'
-                                                }}
+                                                className="add-medication-btn"
                                             >
                                                 + Add Medication
                                             </button>
                                         </div>
-                                    </>
+                                    </div>
                                 )}
                             </div>
                         )}
 
-                        {/* Step 3: Caretaker Info */}
-                        {step === 3 && (
-                            <div className="step-content">
-                                <div className="form-group">
-                                    <label htmlFor="caretakerName"><LabelWithAsterisk>Caretaker Name</LabelWithAsterisk></label>
-                                    <div className="input-wrapper">
-                                        <input
-                                            type="text"
-                                            id="caretakerName"
-                                            name="caretakerName"
-                                            value={formData.caretakerName}
-                                            onChange={handleChange}
-                                            placeholder="Full Name"
-                                            autoFocus
-                                            required
-                                        />
-                                        <span className="input-icon">👤</span>
+                        {/* Step 4: Caretaker Info */}
+                        {step === 4 && (
+                            <div className="step-content fade-in">
+                                <div className="form-group medication-question">
+                                    <label className="form-label"><LabelWithAsterisk>Would you like to add a caretaker contact?</LabelWithAsterisk></label>
+                                    <div className="radio-group">
+                                        <label className="radio-label">
+                                            <input
+                                                type="radio"
+                                                name="hasCaretaker"
+                                                value="yes"
+                                                checked={formData.hasCaretaker === 'yes'}
+                                                onChange={handleChange}
+                                                autoFocus
+                                            />
+                                            <span>Yes</span>
+                                        </label>
+                                        <label className="radio-label">
+                                            <input
+                                                type="radio"
+                                                name="hasCaretaker"
+                                                value="no"
+                                                checked={formData.hasCaretaker === 'no'}
+                                                onChange={handleChange}
+                                            />
+                                            <span>No</span>
+                                        </label>
                                     </div>
                                 </div>
-                                <div className="form-group">
-                                    <label htmlFor="caretakerPhone"><LabelWithAsterisk>Phone Number</LabelWithAsterisk></label>
-                                    <div className="input-wrapper">
-                                        <input
-                                            type="tel"
-                                            id="caretakerPhone"
-                                            name="caretakerPhone"
-                                            value={formData.caretakerPhone}
-                                            onChange={handleChange}
-                                            placeholder="(555) 000-0000"
-                                            required
-                                        />
-                                        <span className="input-icon">📞</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
 
-                        {/* Error Message */}
-                        {error && (
-                            <div style={{ color: 'var(--color-danger)', fontSize: '0.9rem', marginTop: '1rem', textAlign: 'center', fontWeight: 500 }}>
-                                {error}
+                                {/* Conditional: Caretaker Details */}
+                                {formData.hasCaretaker === 'yes' && (
+                                    <div className="medication-section-fade">
+                                        <div className="form-group">
+                                            <label htmlFor="caretakerName"><LabelWithAsterisk>Caretaker Name</LabelWithAsterisk></label>
+                                            <input
+                                                type="text"
+                                                id="caretakerName"
+                                                name="caretakerName"
+                                                value={formData.caretakerName}
+                                                onChange={handleChange}
+                                                placeholder="Full Name"
+                                                autoFocus
+                                                required
+                                                className="form-input"
+                                            />
+                                        </div>
+                                        <div className="form-group">
+                                            <label htmlFor="caretakerPhone"><LabelWithAsterisk>Phone Number</LabelWithAsterisk></label>
+                                            <input
+                                                type="tel"
+                                                id="caretakerPhone"
+                                                name="caretakerPhone"
+                                                value={formData.caretakerPhone}
+                                                onChange={handleChange}
+                                                placeholder="(555) 000-0000"
+                                                required
+                                                className="form-input"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
 
                         {/* Navigation Buttons */}
-                        <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                            {step > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={handleBack}
-                                    style={{
-                                        background: 'var(--bg-primary)',
-                                        color: 'var(--text-main)',
-                                        border: '1px solid rgba(0,0,0,0.1)',
-                                        flex: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '0.5rem',
-                                        padding: '0.875rem'
-                                    }}
-                                >
-                                    <ChevronLeft size={20} /> Back
-                                </button>
-                            )}
+                        <div className="onboarding-navigation">
+                            {/* Error Message - only show if error exists, user attempted submit, and we're on the step where error occurred */}
+                            {error && 
+                             error.trim() !== '' && 
+                             hasAttemptedSubmit === true && 
+                             errorStep !== null && 
+                             typeof errorStep === 'number' && 
+                             errorStep === step ? (
+                                <div className="error-message onboarding-error">
+                                    {error}
+                                </div>
+                            ) : null}
+                            <div className="nav-buttons-row">
+                                {step > 1 && (
+                                    <button
+                                        key="back-btn" // Added key
+                                        type="button"
+                                        onClick={handleBack}
+                                        className="nav-button nav-button-back"
+                                    >
+                                        <ChevronLeft size={20} /> Back
+                                    </button>
+                                )}
 
-                            {step < totalSteps ? (
-                                <button
-                                    type="button"
-                                    onClick={handleNext}
-                                    className="auth-button"
-                                    style={{ flex: 1, margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                                >
-                                    Next <ChevronRight size={20} />
-                                </button>
-                            ) : (
-                                <button
-                                    type="submit"
-                                    className="auth-button"
-                                    style={{ flex: 1, margin: 0, background: 'var(--color-success)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-                                >
-                                    Complete <Check size={20} />
-                                </button>
-                            )}
+                                {step < totalSteps ? (
+                                    <button
+                                        key="next-btn" // Added key
+                                        type="button"
+                                        onClick={handleNext}
+                                        className="nav-button nav-button-next"
+                                    >
+                                        Next <ChevronRight size={20} />
+                                    </button>
+                                ) : (
+                                    <button
+                                        key="submit-btn" // Added key
+                                        type="submit"
+                                        className="nav-button nav-button-submit"
+                                    >
+                                        Complete <Check size={20} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                     </form>

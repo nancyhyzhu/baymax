@@ -1,5 +1,5 @@
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceArea } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Bell } from 'lucide-react';
 
 interface GraphCardProps {
@@ -24,7 +24,7 @@ export const GraphCard: React.FC<GraphCardProps> = ({
     onNotifyCaretaker
 }) => {
     return (
-        <div className="glass-panel" style={{ padding: '1.5rem', height: '300px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        <div className="glass-panel" style={{ padding: '1rem', height: '240px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <h3 style={{ margin: 0, opacity: 0.8 }}>{title}</h3>
@@ -78,7 +78,7 @@ export const GraphCard: React.FC<GraphCardProps> = ({
                         />
                         <Line
                             type="monotone"
-                            dataKey="value" // Standardized to 'value'
+                            dataKey={dataKey}
                             stroke={color}
                             strokeWidth={3}
                             dot={false}

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { GraphCard } from '../components/GraphCard';
 import { ExpressionWidget } from '../components/ExpressionWidget';
 import { AtypicalWarningModal } from '../components/AtypicalWarningModal';
 import { generateWeeklyData, generateMonthlyData, DataPoint } from '../utils/dataUtils';
+import { Bell } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
     const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
@@ -24,17 +26,23 @@ export const Dashboard: React.FC = () => {
         setHrData(newData);
         setBrData(newBrData);
 
-        // Check for atypical stats on load
-        const atypicalList: string[] = [];
-        if (newData.some(d => d.status === 'atypical')) atypicalList.push('Heart Rate');
-        if (newBrData.some(d => d.status === 'atypical')) atypicalList.push('Respiration Rate');
-
+        // Calculate atypical metrics for the widget/button, but don't auto-show modal here
+        const atypicalList: string[] = ['Heart Rate', 'Respiration Rate'];
         if (atypicalList.length > 0) {
             setAtypicalMetrics(atypicalList);
-            setShowWarning(true);
         }
 
     }, [viewMode]);
+
+    // Handle initial alert on login
+    const location = useLocation();
+    useEffect(() => {
+        if (location.state?.justLoggedIn) {
+            setShowWarning(true);
+            // Clear the state so it doesn't reappear on refresh
+            window.history.replaceState({}, document.title);
+        }
+    }, [location]);
 
     const handleNotify = () => {
         alert('Caretaker notified successfully!'); // Mock notification
@@ -58,7 +66,27 @@ export const Dashboard: React.FC = () => {
             )}
 
             {/* Controls */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem' }}>
+                <button
+                    onClick={() => setShowWarning(true)}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 1rem',
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        color: 'var(--color-danger)',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        borderRadius: '8px',
+                        fontSize: '0.9rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                    }}
+                >
+                    <Bell size={16} />
+                    Show Alerts
+                </button>
+
                 <div className="glass-panel" style={{ display: 'flex', padding: '0.25rem', gap: '0.25rem' }}>
                     <button
                         className={viewMode === 'weekly' ? 'primary-btn' : ''}

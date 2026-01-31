@@ -1,8 +1,10 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { User, Activity, Calendar, Settings } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { User, Activity, Calendar, Settings, LogOut } from 'lucide-react';
 
 export const Header: React.FC = () => {
+  const navigate = useNavigate();
+
   const linkStyle = ({ isActive }: { isActive: boolean }) => ({
     display: 'flex',
     alignItems: 'center',
@@ -16,6 +18,11 @@ export const Header: React.FC = () => {
     transition: 'all 0.2s'
   });
 
+  const handleLogout = () => {
+    // In a real app, clear auth tokens here
+    navigate('/login');
+  };
+
   return (
     <header style={{
       display: 'flex',
@@ -24,6 +31,8 @@ export const Header: React.FC = () => {
       marginBottom: '2rem',
       padding: '1rem 2rem',
     }} className="glass-panel">
+
+      {/* ... Logo section unchanged ... */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <div style={{
           background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
@@ -42,7 +51,7 @@ export const Header: React.FC = () => {
       </div>
 
       <nav style={{ display: 'flex', gap: '1rem' }}>
-        <NavLink to="/" style={linkStyle}>
+        <NavLink to="/dashboard" style={linkStyle}>
           <Activity size={18} />
           Dashboard
         </NavLink>
@@ -56,19 +65,44 @@ export const Header: React.FC = () => {
         </NavLink>
       </nav>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontWeight: 600 }}>Hiro Hamada</div>
-          <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Patient ID: #84920</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontWeight: 600 }}>Hiro Hamada</div>
+            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Patient ID: #84920</div>
+          </div>
+          <div style={{
+            background: 'rgba(59, 130, 246, 0.1)',
+            padding: '0.5rem',
+            borderRadius: '50%',
+            color: 'var(--color-primary)'
+          }}>
+            <User size={20} />
+          </div>
         </div>
-        <div style={{
-          background: 'rgba(59, 130, 246, 0.1)',
-          padding: '0.5rem',
-          borderRadius: '50%',
-          color: 'var(--color-primary)'
-        }}>
-          <User size={20} />
-        </div>
+
+        <div style={{ height: '24px', width: '1px', background: 'var(--glass-border)' }}></div>
+
+        <button
+          onClick={handleLogout}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            padding: '0.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            transition: 'color 0.2s',
+            boxShadow: 'none'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-danger)'}
+          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+          title="Sign Out"
+        >
+          <LogOut size={20} />
+        </button>
       </div>
     </header>
   );

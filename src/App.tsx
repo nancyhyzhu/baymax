@@ -1,23 +1,44 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Header } from './components/Header';
 import { Dashboard } from './pages/Dashboard';
 import { DailySession } from './pages/DailySession';
 import { Settings } from './pages/Settings';
+import { Login } from './pages/Login';
+import { CreateAccount } from './pages/CreateAccount';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
+
+function AppContent() {
+    const location = useLocation();
+    const isAuthPage = ['/login', '/create-account', '/forgot-password', '/reset-password'].includes(location.pathname);
+
+    return (
+        <div style={{ position: 'relative', minHeight: '100vh', paddingBottom: isAuthPage ? 0 : '2rem' }}>
+            {!isAuthPage && <Header />}
+
+            {/* Main Route Content */}
+            <Routes>
+                {/* Auth Routes */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/create-account" element={<CreateAccount />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+
+                {/* Dashboard Routes */}
+                <Route path="/" element={<Navigate to="/login" replace />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/session" element={<DailySession />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+        </div>
+    );
+}
 
 function App() {
     return (
         <Router>
-            <div style={{ position: 'relative', minHeight: '100vh', paddingBottom: '2rem' }}>
-                <Header />
-
-                {/* Main Route Content */}
-                <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/session" element={<DailySession />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-            </div>
+            <AppContent />
         </Router>
     );
 }

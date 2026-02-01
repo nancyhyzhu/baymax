@@ -353,6 +353,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const removeFromSchedule = async (day: string, med: string, index: number) => {
         if (!user) return;
+        console.log(index);
 
         // Check if medication is currently marked as daily
         const medDetails = medicationDetails.find(m => m.name === med);
@@ -423,8 +424,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Better: parse it robustly or store it in context differently.
         // Current: `${dateStr}_${med}_${idx}`
         const parts = recordId.split('_');
-        const dateStr = parts[0];
-        const idx = parts.pop(); // remove index
+        parts.pop(); // remove index
         const medName = parts.slice(1).join('_'); // Rejoin rest as med name
 
         const q = query(collection(db, 'medications'), where('userId', '==', user.uid), where('name', '==', medName));

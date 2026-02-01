@@ -31,10 +31,6 @@ export const MedicalInfo: React.FC = () => {
     reminder: false
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
   const handleSave = async () => {
     const updatedFormData = {
       ...formData,

@@ -134,7 +134,7 @@ export const MedicationCalendar: React.FC<MedicationCalendarProps> = ({
                                 onClick={() => setActiveTab('overview')}
                                 style={{ fontSize: '0.75rem', padding: '0.35rem 0.9rem', display: 'flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'center' }}
                             >
-                                Weekly View
+                                Widget View
                             </button>
                             <div style={{ width: '1px', background: '#e5e7eb', margin: '0 0.5rem' }}></div>
                             <button
@@ -255,7 +255,6 @@ export const MedicationCalendar: React.FC<MedicationCalendarProps> = ({
                             {effectiveSchedule[day].map((med, idx) => {
                                 const medDetails = medicationDetails.find(m => m.name === med);
                                 const isAutoScheduled = medDetails?.frequency === 'daily';
-                                const isManuallyScheduled = (schedule[day] || []).includes(med);
                                 
                                 return (
                                     <div

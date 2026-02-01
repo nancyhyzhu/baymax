@@ -62,15 +62,15 @@ export const Settings: React.FC = () => {
           e.target.style.boxShadow = 'none';
         }}
         onMouseEnter={(e) => {
-          if (document.activeElement !== e.target) {
-            e.target.style.borderColor = 'var(--color-primary)';
-            e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+          if (document.activeElement !== e.currentTarget) {
+            e.currentTarget.style.borderColor = 'var(--color-primary)';
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.9)';
           }
         }}
         onMouseLeave={(e) => {
-          if (document.activeElement !== e.target) {
-            e.target.style.borderColor = 'rgba(0, 0, 0, 0.1)';
-            e.target.style.background = 'rgba(255, 255, 255, 0.7)';
+          if (document.activeElement !== e.currentTarget) {
+            e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.1)';
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.7)';
           }
         }}
       />

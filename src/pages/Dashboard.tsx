@@ -32,7 +32,7 @@ export const Dashboard: React.FC = () => {
             try {
                 console.log(`[Dashboard] Fetching data for user: ${user.uid}...`);
                 // 1. Fetch real data from Firestore (weekly view only - 7 days)
-                let readings = await getHealthReadings(user.uid, 7);
+                let readings = await getHealthReadings(user.uid, 100);
                 console.log(`[Dashboard] Found ${readings.length} readings.`);
 
                 // 2. Seed data if none exists
@@ -43,7 +43,7 @@ export const Dashboard: React.FC = () => {
                 // 3. Map Firestore data to chart format - weekly view only
                 // Create a full week structure with all 7 days
                 const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                
+
                 // Group readings by day of week
                 const readingsByDay: { [key: string]: typeof readings } = {};
                 readings.forEach(r => {
@@ -310,7 +310,7 @@ export const Dashboard: React.FC = () => {
                 </div>
             ) : (
                 <div style={{ height: 'calc(100vh - 200px)', width: '100%', marginRight: '2rem' }}>
-                    <MedicationCalendar 
+                    <MedicationCalendar
                         activeTab={activeTab}
                         setActiveTab={setActiveTab}
                         atypicalMetrics={atypicalMetrics}

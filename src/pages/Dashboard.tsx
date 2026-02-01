@@ -314,8 +314,13 @@ export const Dashboard: React.FC = () => {
                     </div>
                 </div>
             ) : (
-                <div style={{ height: 'calc(100vh - 200px)', paddingBottom: '2rem' }}>
-                    <MedicationCalendar />
+                <div style={{ height: 'calc(100vh - 200px)', width: '100%', marginRight: '2rem' }}>
+                    <MedicationCalendar 
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                        atypicalMetrics={atypicalMetrics}
+                        onShowWarning={() => setShowWarning(true)}
+                    />
                 </div>
             )}
         </div>

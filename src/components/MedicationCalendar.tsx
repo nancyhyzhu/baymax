@@ -1,8 +1,20 @@
 import React, { useState, useMemo } from 'react';
 import { useUser } from '../context/UserContext';
-import { Plus, X, GripVertical } from 'lucide-react';
+import { Plus, X, GripVertical, Bell, Calendar as CalendarIcon } from 'lucide-react';
 
-export const MedicationCalendar: React.FC = () => {
+interface MedicationCalendarProps {
+    activeTab: 'overview' | 'medications';
+    setActiveTab: (tab: 'overview' | 'medications') => void;
+    atypicalMetrics: string[];
+    onShowWarning: () => void;
+}
+
+export const MedicationCalendar: React.FC<MedicationCalendarProps> = ({ 
+    activeTab, 
+    setActiveTab, 
+    atypicalMetrics, 
+    onShowWarning 
+}) => {
     const { medications, medicationDetails, addMedication, schedule, addToSchedule, removeFromSchedule } = useUser();
     const [newMed, setNewMed] = useState('');
 
@@ -80,14 +92,62 @@ export const MedicationCalendar: React.FC = () => {
     };
 
     return (
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-
+        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '2rem', width: '100%' }}>
             {/* Top Section: Available Medications (Palette) */}
-            <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                <h3 style={{ marginTop: 0, marginBottom: '1rem', color: '#3b82f6' }}>Available Medications</h3>
-                <p style={{ fontSize: '0.9rem', marginBottom: '1rem', opacity: 0.7 }}>
-                    Drag these medications into the daily slots below.
-                </p>
+            <div className="glass-panel" style={{ padding: '1.5rem', width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <div>
+                        <h3 style={{ marginTop: 0, marginBottom: '0.5rem', color: '#3b82f6' }}>Available Medications</h3>
+                        <p style={{ fontSize: '0.9rem', margin: 0, opacity: 0.7 }}>
+                            Drag these medications into the daily slots below.
+                        </p>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <button
+                            onClick={onShowWarning}
+                            disabled={atypicalMetrics.length === 0}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem',
+                                padding: '0.5rem 1rem',
+                                background: atypicalMetrics.length > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                color: atypicalMetrics.length > 0 ? 'var(--color-danger)' : '#10b981',
+                                border: `1px solid ${atypicalMetrics.length > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`,
+                                borderRadius: '8px',
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
+                                cursor: atypicalMetrics.length > 0 ? 'pointer' : 'default',
+                                opacity: atypicalMetrics.length > 0 ? 1 : 0.8,
+                                width: 'auto',
+                                minWidth: '100px'
+                            }}
+                        >
+                            <Bell size={14} />
+                            {atypicalMetrics.length > 0 ? 'Show Alerts' : 'No Alerts'}
+                        </button>
+
+                        <div className="glass-panel" style={{ display: 'flex', padding: '0.25rem', gap: '0.25rem' }}>
+                            <button
+                                className={activeTab === 'overview' ? 'primary-btn' : ''}
+                                onClick={() => setActiveTab('overview')}
+                                style={{ fontSize: '0.75rem', padding: '0.35rem 0.9rem', display: 'flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                Weekly View
+                            </button>
+                            <div style={{ width: '1px', background: '#e5e7eb', margin: '0 0.5rem' }}></div>
+                            <button
+                                className={activeTab === 'medications' ? 'primary-btn' : ''}
+                                onClick={() => setActiveTab('medications')}
+                                style={{ fontSize: '0.75rem', padding: '0.35rem 0.9rem', display: 'flex', gap: '0.4rem', alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                <CalendarIcon size={12} />
+                                Schedule
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center' }}>
                     {availableMedications.map((med, idx) => {
@@ -160,7 +220,8 @@ export const MedicationCalendar: React.FC = () => {
                 display: 'grid',
                 gridTemplateColumns: 'repeat(7, 1fr)',
                 gap: '1rem',
-                flex: 1
+                flex: 1,
+                width: '100%'
             }}>
                 {days.map(day => (
                     <div

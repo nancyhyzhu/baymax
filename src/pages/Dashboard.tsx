@@ -9,7 +9,6 @@ import { Bell, Calendar as CalendarIcon } from 'lucide-react';
 import { useUser } from '../context/UserContext';
 import { checkAllHealthStats } from '../services/geminiService';
 import { getHealthReadings } from '../services/healthService';
-import { seedSampleHealthData } from '../utils/seedData';
 import { DataPoint } from '../utils/dataUtils';
 
 export const Dashboard: React.FC = () => {

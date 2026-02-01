@@ -10,38 +10,13 @@ import { doc, getDoc, setDoc } from 'firebase/firestore';
 const getGeminiAPI = () => {
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
   if (!apiKey || apiKey === 'your_api_key_here') {
-    console.warn('Gemini API key not configured or using placeholder. Using threshold-based analysis.');
     return null;
   }
   return new GoogleGenerativeAI(apiKey);
 };
 
-/**
- * Diagnostic tool: List all models available to your API key
- * This will log the results to your browser console.
- */
-export async function listAvailableModels() {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) return;
-  
-  console.log('[Gemini Diagnostic] Checking model availability...');
-  
-  try {
-    // Check v1beta
-    const betaResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-    const betaData = await betaResponse.json();
-    console.log('[Gemini Diagnostic] v1beta Models:', betaData);
-    
-    // Check v1
-    const v1Response = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
-    const v1Data = await v1Response.json();
-    console.log('[Gemini Diagnostic] v1 Models:', v1Data);
-    
-    return { v1beta: betaData, v1: v1Data };
-  } catch (error) {
-    console.error('[Gemini Diagnostic] Failed to list models:', error);
-  }
-}
+// Session-based circuit breaker to avoid repeated failing calls
+let isGeminiAvailable = true;
 
 export interface HealthCheckRequest {
   sex: string;
@@ -103,7 +78,6 @@ async function checkCache(userId: string, cacheKey: string): Promise<boolean | n
     const cacheDoc = await getDoc(doc(db, 'health_analysis_cache', `${userId}_${cacheKey}`));
     if (cacheDoc.exists()) {
       const data = cacheDoc.data();
-      console.log(`[Cache Hit] Stat is ${data.isTypical ? 'TYPICAL' : 'ATYPICAL'} for ${cacheKey}`);
       return data.isTypical;
     }
   } catch (error) {
@@ -124,14 +98,12 @@ async function saveToCache(userId: string, cacheKey: string, isTypical: boolean)
       timestamp: new Date().toISOString(),
       cacheKey
     });
-    console.log(`[Cache Saved] Result (${isTypical ? 'TYPICAL' : 'ATYPICAL'}) stored for ${cacheKey}`);
+    // Cached result stored
   } catch (error) {
     console.error('Error saving to cache:', error);
   }
 }
 
-// Session-based circuit breaker to avoid repeated failing calls
-let isGeminiAvailable = true;
 
 /**
  * Check if a single health stat is typical for the user's demographics
@@ -150,18 +122,13 @@ export async function checkHealthStat(request: HealthCheckRequest, userId?: stri
   // 2. Try Gemini API
   const genAI = getGeminiAPI();
   if (genAI && isGeminiAvailable) {
-    // List of models confirmed via diagnostics for this project (Feb 2026)
-    const modelNames = [
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-flash-latest'
-    ];
+    // List of models confirmed via diagnostics
+    const modelNames = ['gemini-2.5-flash'];
     
     for (const modelName of modelNames) {
       try {
         const model = genAI.getGenerativeModel({ 
           model: modelName,
-          // SAFETY SETTINGS: This prevents the AI from blocking the response because it thinks it's "medical advice"
           safetySettings: [
             { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
             { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -171,20 +138,15 @@ export async function checkHealthStat(request: HealthCheckRequest, userId?: stri
           generationConfig: { temperature: 0.1, maxOutputTokens: 5 }
         });
 
-        // IMPROVED PROMPT: Framed as statistical analysis to avoid medical filters
         const prompt = `Act as a clinical data analyzer. 
         User Profile: ${request.sex}, ${request.age}yo, ${request.weight}kg, ${request.height}cm, conditions: ${request.conditions}.
         Question: Is a ${request.statName} of ${request.statValue} ${request.unit} within the typical statistical range for this profile?
         Answer only with "true" or "false".`;
 
-        console.log(`[Gemini Request] Analyzing ${request.statName} (${request.statValue}) with ${modelName}...`);
-        
         const result = await model.generateContent(prompt);
         const text = result.response.text().trim().toLowerCase();
         
-        // Robust parsing of the response
         const isTypical = text.includes('true');
-        console.log(`[Gemini Success] ${modelName} result: ${text}`);
 
         if (userId) await saveToCache(userId, cacheKey, isTypical);
         return { isTypical, statName: request.statName };
@@ -206,7 +168,7 @@ export async function checkHealthStat(request: HealthCheckRequest, userId?: stri
 
   // 3. Fallback to Threshold-based analysis (if Gemini fails or is missing)
   const isTypical = checkHealthStatThreshold(request);
-  console.log(`[Threshold Fallback] Result for ${request.statName}: ${isTypical}`);
+  // Fallback used
   
   if (userId) await saveToCache(userId, cacheKey, isTypical);
   return { isTypical, statName: request.statName };

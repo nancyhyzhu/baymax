@@ -40,14 +40,7 @@ export const Dashboard: React.FC = () => {
 
                 // 2. Seed data if none exists
                 if (readings.length === 0) {
-                    console.log(`[Dashboard] No data found. Seeding sample data...`);
-                    const seededData = await seedSampleHealthData(user.uid);
-                    if (seededData && seededData.length > 0) {
-                        readings = seededData;
-                        console.log(`[Dashboard] Using ${readings.length} seeded readings.`);
-                    } else {
-                        console.warn(`[Dashboard] Seeding failed or returned no data.`);
-                    }
+                    return;
                 }
 
                 // 3. Map Firestore data to chart format

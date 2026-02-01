@@ -5,7 +5,7 @@ import './Settings.css';
 import './Onboarding.css';
 
 export const MedicalInfo: React.FC = () => {
-  const { profile, updateProfile, medicationDetails, addMedicationWithDetails, removeMedicationByIndex, updateMedicationReminder } = useUser();
+  const { profile, updateProfile, medicationDetails, addMedicationWithDetails, removeMedicationByIndex, updateMedicationReminder, updateMedicationDetails } = useUser();
 
   // We keep local state for form fields to allow editing before saving
   const [formData, setFormData] = useState(profile);
@@ -93,6 +93,10 @@ export const MedicalInfo: React.FC = () => {
     const med = medicationDetails[index];
     if (!med || !med.frequency || !med.time) return;
     await updateMedicationReminder(index, !med.reminder);
+  };
+
+  const handleFrequencyChange = async (index: number, newFrequency: string) => {
+    await updateMedicationDetails(index, { frequency: newFrequency });
   };
 
   const LabelWithAsterisk = ({ children }: { children: React.ReactNode }) => (
@@ -263,7 +267,26 @@ export const MedicalInfo: React.FC = () => {
                 {medicationDetails.map((med, index) => (
                   <tr key={index} className="medication-row">
                     <td>{med.name || '--'}</td>
-                    <td className="capitalize">{med.frequency ? med.frequency.replace('-', ' ') : '--'}</td>
+                    <td>
+                      <select
+                        value={med.frequency || ''}
+                        onChange={(e) => handleFrequencyChange(index, e.target.value)}
+                        className="form-select"
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          fontSize: '0.875rem',
+                          border: '1px solid var(--input-border)',
+                          borderRadius: '4px',
+                          background: 'white',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="">Select frequency</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="as-needed">As Needed</option>
+                      </select>
+                    </td>
                     <td>{med.time || '--'}</td>
                     <td className="notify-cell">
                       <label className="notify-checkbox-label">

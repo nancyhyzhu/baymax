@@ -10,43 +10,46 @@ export const MedicationWidget: React.FC = () => {
     const dayName = days[todayDate.getDay()];
     const dateStr = todayDate.toLocaleDateString('en-CA'); // YYYY-MM-DD
 
-    // Get medications from schedule (if manually scheduled via calendar)
-    const scheduledMeds = schedule[dayName] || [];
+    // Get medications that should be shown today
+    // Priority: Show medications from medicationDetails that have reminder enabled
+    // This ensures daily medications with reminder show up as checkboxes
+    const todaysMeds = useMemo(() => {
+        // Show ALL daily medications (regardless of reminder or time)
+        // Also show medications with reminder enabled and time set
+        const medsFromDatabase = medicationDetails
+            .filter(med => {
+                if (!med.name) return false;
+                
+                // Show ALL daily medications (even without reminder or time)
+                if (med.frequency === 'daily') {
+                    return true;
+                }
+                
+                // For non-daily medications, only show if reminder is enabled and time is set
+                if (!med.reminder) return false;
+                if (!med.frequency || !med.time) return false;
+                
+                // Show weekly medications every day (user can take them any day)
+                if (med.frequency === 'weekly') {
+                    return true;
+                }
+                
+                // Show "as-needed" medications if they have a time set
+                if (med.frequency === 'as-needed') {
+                    return true;
+                }
+                
+                return false;
+            })
+            .map(med => med.name);
 
-    // Get medications from database that should be shown today - only those with reminder enabled
-    const medsFromDatabase = medicationDetails
-        .filter(med => {
-            if (!med.name) return false;
-            
-            // Only show medications that have reminder enabled
-            if (!med.reminder) return false;
-            
-            // Must have frequency and time set for reminder to work
-            if (!med.frequency || !med.time) return false;
-            
-            // Show daily medications every day
-            if (med.frequency === 'daily') {
-                return true;
-            }
-            
-            // Show weekly medications every day (user can take them any day)
-            // You can enhance this to show only on specific days if needed
-            if (med.frequency === 'weekly') {
-                return true;
-            }
-            
-            // Show "as-needed" medications if they have a time set
-            if (med.frequency === 'as-needed') {
-                return true;
-            }
-            
-            return false;
-        })
-        .map(med => med.name);
-
-    // Combine scheduled meds and database meds, removing duplicates
-    const allMedsSet = new Set([...scheduledMeds, ...medsFromDatabase]);
-    const todaysMeds = Array.from(allMedsSet);
+        // Also check schedule for manually scheduled medications
+        const scheduledMeds = schedule[dayName] || [];
+        
+        // Combine both sources
+        const allMedsSet = new Set([...medsFromDatabase, ...scheduledMeds]);
+        return Array.from(allMedsSet);
+    }, [medicationDetails, schedule, dayName]);
 
     return (
         <div className="glass-panel" style={{ padding: '1.5rem', height: '100%', display: 'flex', flexDirection: 'column' }}>

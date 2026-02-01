@@ -1,4 +1,8 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { 
+  GoogleGenerativeAI, 
+  HarmCategory, 
+  HarmBlockThreshold 
+} from '@google/generative-ai';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
@@ -17,6 +21,7 @@ export interface HealthCheckRequest {
   age: number;
   weight: string;
   height: string;
+  conditions: string;
   statValue: number;
   statName: 'heartbeat' | 'respiration rate' | 'mood';
   unit: string;
@@ -115,45 +120,59 @@ export async function checkHealthStat(request: HealthCheckRequest, userId?: stri
     }
   }
 
-  // 2. Try Gemini API if available and not previously failed in this session
+  // 2. Try Gemini API
   const genAI = getGeminiAPI();
   if (genAI && isGeminiAvailable) {
-    const modelNames = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro'];
+    // We use flash first as it is fastest and least likely to trigger filters
+    const modelNames = ['gemini-1.5-flash', 'gemini-1.5-pro'];
+    
     for (const modelName of modelNames) {
       try {
         const model = genAI.getGenerativeModel({ 
           model: modelName,
-          generationConfig: { temperature: 0.1, maxOutputTokens: 10 }
+          // SAFETY SETTINGS: This prevents the AI from blocking the response because it thinks it's "medical advice"
+          safetySettings: [
+            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          ],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 5 }
         });
 
-        const prompt = `Given a ${request.sex} individual, age ${request.age}, weighing ${request.weight}kg who is ${request.height}cm tall, is ${request.statValue} ${request.unit} in the typical expected range for ${request.statName}? Please give a one word response true (for yes) or false (for no) do not include any other characters in your message`;
+        // IMPROVED PROMPT: Framed as statistical analysis to avoid medical filters
+        const prompt = `Act as a clinical data analyzer. 
+        User Profile: ${request.sex}, ${request.age}yo, ${request.weight}kg, ${request.height}cm, conditions: ${request.conditions}.
+        Question: Is a ${request.statName} of ${request.statValue} ${request.unit} within the typical statistical range for this profile?
+        Answer only with "true" or "false".`;
 
         console.log(`[Gemini Request] Analyzing ${request.statName} (${request.statValue}) with ${modelName}...`);
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text().trim().toLowerCase();
         
-        // true = typical, false = atypical
+        const result = await model.generateContent(prompt);
+        const text = result.response.text().trim().toLowerCase();
+        
+        // Robust parsing of the response
         const isTypical = text.includes('true');
-        console.log(`[Gemini Success] ${modelName} analysis: ${text} (Typical: ${isTypical})`);
+        console.log(`[Gemini Success] ${modelName} result: ${text}`);
 
         if (userId) await saveToCache(userId, cacheKey, isTypical);
         return { isTypical, statName: request.statName };
+
       } catch (err: any) {
-        // If it's a 404 or blocked by client, disable Gemini for this session to reduce noise
-        if (err.message && (err.message.includes('404') || err.message.includes('BLOCKED_BY_CLIENT') || err.message.includes('not found'))) {
-          console.warn(`[Gemini Disabled] API returned 404 or was blocked. Switching to threshold fallback for this session.`);
+        console.warn(`[Gemini Error] ${modelName} failed:`, err.message);
+        
+        // If the API key is invalid or blocked by an ad-blocker, don't keep trying
+        if (err.message?.includes('API_KEY_INVALID') || err.message?.includes('BLOCKED_BY_CLIENT')) {
           isGeminiAvailable = false;
           break; 
         }
-        console.warn(`[Gemini Error] ${modelName} failed. Trying next...`);
       }
     }
   }
 
-  // 3. Fallback to Threshold-based analysis (always works)
+  // 3. Fallback to Threshold-based analysis (if Gemini fails or is missing)
   const isTypical = checkHealthStatThreshold(request);
-  console.log(`[Threshold Analysis] Result for ${request.statName}: ${isTypical ? 'TYPICAL' : 'ATYPICAL'}`);
+  console.log(`[Threshold Fallback] Result for ${request.statName}: ${isTypical}`);
   
   if (userId) await saveToCache(userId, cacheKey, isTypical);
   return { isTypical, statName: request.statName };
@@ -163,7 +182,7 @@ export async function checkHealthStat(request: HealthCheckRequest, userId?: stri
  * Check all health stats at once
  */
 export async function checkAllHealthStats(
-  profile: { sex: string; age: number; weight: string; height: string },
+  profile: { sex: string; age: number; weight: string; height: string; conditions: string },
   heartRateAvg: number,
   respirationRateAvg: number,
   moodScore: number,
@@ -177,6 +196,7 @@ export async function checkAllHealthStats(
       age: profile.age,
       weight: profile.weight,
       height: profile.height,
+      conditions: profile.conditions,
       statValue: heartRateAvg,
       statName: 'heartbeat',
       unit: 'bpm'
@@ -186,6 +206,7 @@ export async function checkAllHealthStats(
       age: profile.age,
       weight: profile.weight,
       height: profile.height,
+      conditions: profile.conditions,
       statValue: respirationRateAvg,
       statName: 'respiration rate',
       unit: 'breaths/min'
@@ -195,6 +216,7 @@ export async function checkAllHealthStats(
       age: profile.age,
       weight: profile.weight,
       height: profile.height,
+      conditions: profile.conditions,
       statValue: moodScore,
       statName: 'mood',
       unit: 'score (1-10)'

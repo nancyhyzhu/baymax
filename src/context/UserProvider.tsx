@@ -187,7 +187,28 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (!user) return;
         if (medications.includes(med.name)) return;
 
-        // Optimistic update
+        // If medication is daily, add to all days of the week (regardless of reminder status)
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const initialSchedule: string[] = [];
+        
+        if (med.frequency === 'daily') {
+            // Add to all days if it's a daily medication
+            initialSchedule.push(...days);
+            
+            // Update local schedule state immediately
+            setSchedule(prev => {
+                const newSchedule = { ...prev };
+                days.forEach(day => {
+                    if (!newSchedule[day]) newSchedule[day] = [];
+                    if (!newSchedule[day].includes(med.name)) {
+                        newSchedule[day].push(med.name);
+                    }
+                });
+                return newSchedule;
+            });
+        }
+
+        // Optimistic update - update state immediately so components react
         setMedications(prev => [...prev, med.name]);
         setMedicationDetails(prev => [...prev, med]);
 
@@ -198,7 +219,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             frequency: med.frequency || '',
             time: med.time || '',
             reminder: med.reminder || false,
-            schedule: [],
+            schedule: initialSchedule,
             takenHistory: {}
         });
     };
@@ -228,14 +249,84 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const med = medicationDetails[index];
         if (!med) return;
 
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        
+        // If medication is daily, ensure it's in all days of the schedule
+        if (med.frequency === 'daily') {
+            setSchedule(prev => {
+                const newSchedule = { ...prev };
+                days.forEach(day => {
+                    if (!newSchedule[day]) newSchedule[day] = [];
+                    if (!newSchedule[day].includes(med.name)) {
+                        newSchedule[day].push(med.name);
+                    }
+                });
+                return newSchedule;
+            });
+        }
+
         // Optimistic update
         setMedicationDetails(prev => prev.map((m, i) => i === index ? { ...m, reminder } : m));
 
         // Update Firestore
         const medRef = doc(db, 'medications', `${user.uid}_${med.name}`);
-        await updateDoc(medRef, {
-            reminder: reminder
-        });
+        const updateData: any = { reminder: reminder };
+        
+        // If daily, ensure schedule includes all days
+        if (med.frequency === 'daily') {
+            updateData.schedule = days;
+        }
+        
+        await updateDoc(medRef, updateData);
+    };
+
+    const updateMedicationDetails = async (index: number, updates: { frequency?: string; time?: string; reminder?: boolean }) => {
+        if (!user) return;
+        const med = medicationDetails[index];
+        if (!med) return;
+
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const updatedMed = { ...med, ...updates };
+        
+        // If medication becomes daily, add to all days (regardless of reminder)
+        if (updatedMed.frequency === 'daily') {
+            setSchedule(prev => {
+                const newSchedule = { ...prev };
+                days.forEach(day => {
+                    if (!newSchedule[day]) newSchedule[day] = [];
+                    if (!newSchedule[day].includes(med.name)) {
+                        newSchedule[day].push(med.name);
+                    }
+                });
+                return newSchedule;
+            });
+        } else if (updates.frequency && updates.frequency !== 'daily') {
+            // If frequency changes from daily to something else, remove from all days
+            setSchedule(prev => {
+                const newSchedule = { ...prev };
+                Object.keys(newSchedule).forEach(day => {
+                    newSchedule[day] = newSchedule[day].filter(m => m !== med.name);
+                });
+                return newSchedule;
+            });
+        }
+
+        // Optimistic update
+        setMedicationDetails(prev => prev.map((m, i) => i === index ? updatedMed : m));
+
+        // Update Firestore
+        const medRef = doc(db, 'medications', `${user.uid}_${med.name}`);
+        const updateData: any = { ...updates };
+        
+        // If daily, ensure schedule includes all days
+        if (updatedMed.frequency === 'daily') {
+            updateData.schedule = days;
+        } else if (updates.frequency && updates.frequency !== 'daily') {
+            // If frequency changes from daily to something else, clear schedule
+            updateData.schedule = [];
+        }
+        
+        await updateDoc(medRef, updateData);
     };
 
     const addToSchedule = async (day: string, med: string) => {
@@ -263,10 +354,17 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const removeFromSchedule = async (day: string, med: string, index: number) => {
         if (!user) return;
 
-        // Optimistic
+        // Check if medication is currently marked as daily
+        const medDetails = medicationDetails.find(m => m.name === med);
+        const isDaily = medDetails?.frequency === 'daily';
+
+        // Optimistic update - only if medication exists in local schedule state
         setSchedule(prev => {
             const dayMeds = [...(prev[day] || [])];
-            dayMeds.splice(index, 1);
+            const medIdx = dayMeds.indexOf(med);
+            if (medIdx > -1) {
+                dayMeds.splice(medIdx, 1);
+            }
             return { ...prev, [day]: dayMeds };
         });
 
@@ -280,9 +378,29 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const removeIdx = currentSchedule.indexOf(day);
             if (removeIdx > -1) {
                 currentSchedule.splice(removeIdx, 1);
-                await updateDoc(medDoc.ref, {
-                    schedule: currentSchedule
-                });
+                
+                // If medication was daily and a day is removed, change frequency from daily
+                let updateData: any = { schedule: currentSchedule };
+                if (isDaily && currentSchedule.length < 7) {
+                    // Not all days are scheduled anymore, change frequency from daily
+                    updateData.frequency = '';
+                    // Update local state
+                    setMedicationDetails(prev => prev.map(m => 
+                        m.name === med ? { ...m, frequency: '' } : m
+                    ));
+                }
+                
+                await updateDoc(medDoc.ref, updateData);
+            } else if (isDaily) {
+                // If day wasn't in Firestore schedule but medication is daily,
+                // we still need to update Firestore to reflect the removal
+                // and change frequency since it's no longer on all days
+                const updateData: any = { schedule: currentSchedule };
+                updateData.frequency = '';
+                setMedicationDetails(prev => prev.map(m => 
+                    m.name === med ? { ...m, frequency: '' } : m
+                ));
+                await updateDoc(medDoc.ref, updateData);
             }
         }
     };
@@ -347,6 +465,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             removeMedication,
             removeMedicationByIndex,
             updateMedicationReminder,
+            updateMedicationDetails,
             schedule,
             addToSchedule,
             removeFromSchedule,

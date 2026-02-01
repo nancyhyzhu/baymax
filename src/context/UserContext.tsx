@@ -33,6 +33,7 @@ interface UserContextType {
     removeMedication: (med: string) => Promise<void>;
     removeMedicationByIndex: (index: number) => Promise<void>;
     updateMedicationReminder: (index: number, reminder: boolean) => Promise<void>;
+    updateMedicationDetails: (index: number, updates: { frequency?: string; time?: string; reminder?: boolean }) => Promise<void>;
 
     // Schedule: Day -> List of medications
     schedule: Record<string, string[]>;

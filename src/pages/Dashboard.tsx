@@ -290,7 +290,7 @@ export const Dashboard: React.FC = () => {
                                 onClick={() => setActiveTab('overview')}
                                 style={{ fontSize: '0.8rem', padding: '0.4rem 1rem', display: 'flex', gap: '0.4rem', alignItems: 'center', flex: 1, justifyContent: 'center' }}
                             >
-                                Weekly View
+                                Widget View
                             </button>
                             <div style={{ width: '1px', background: '#e5e7eb', margin: '0 0.5rem' }}></div>
                             <button

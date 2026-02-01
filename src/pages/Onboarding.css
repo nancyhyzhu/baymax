@@ -245,6 +245,21 @@
     text-align: left;
 }
 
+/* Ensure medication name input aligns properly - override Auth.css padding for icon spacing */
+.add-medication-form .form-group input[type="text"].form-input,
+.add-medication-form .form-group .form-input {
+    padding-left: 1rem !important;
+    text-indent: 0 !important;
+}
+
+/* Ensure caretaker inputs align properly - override Auth.css padding for icon spacing */
+.medication-section-fade .form-group input[type="text"].form-input,
+.medication-section-fade .form-group input[type="tel"].form-input,
+.medication-section-fade .form-group .form-input {
+    padding-left: 1rem !important;
+    text-indent: 0 !important;
+}
+
 .form-input::placeholder {
     color: var(--text-secondary);
     opacity: 1;

@@ -11,10 +11,15 @@
     flex: 0 1 auto;
     width: 100%;
     max-width: 600px;
-    background: transparent;
+    background: transparent !important;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* Override auth-form-section white background for onboarding */
+.auth-container.onboarding-container .auth-form-section {
+    background: transparent !important;
 }
 
 .onboarding-card {
@@ -22,6 +27,8 @@
     width: 100%;
     padding: 2rem;
     box-shadow: none;
+    background: transparent;
+    border: none;
     animation: fadeIn 0.6s ease-out;
 }
 
@@ -256,6 +263,13 @@
 .medication-section-fade .form-group input[type="text"].form-input,
 .medication-section-fade .form-group input[type="tel"].form-input,
 .medication-section-fade .form-group .form-input {
+    padding-left: 1rem !important;
+    text-indent: 0 !important;
+}
+
+/* Ensure age, height, and weight inputs align properly - override Auth.css padding for icon spacing */
+.onboarding-form .form-group input[type="number"].form-input,
+.onboarding-form .form-group input[type="number"] {
     padding-left: 1rem !important;
     text-indent: 0 !important;
 }

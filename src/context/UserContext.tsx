@@ -22,8 +22,17 @@ interface UserContextType {
 
     // Medication Data
     medications: string[]; // List of available medications (Derived from schedule/db)
+    medicationDetails: Array<{
+        name: string;
+        frequency: string;
+        time: string;
+        reminder: boolean;
+    }>; // Full medication details from database
     addMedication: (med: string) => Promise<void>;
+    addMedicationWithDetails: (med: { name: string; frequency: string; time: string; reminder: boolean }) => Promise<void>;
     removeMedication: (med: string) => Promise<void>;
+    removeMedicationByIndex: (index: number) => Promise<void>;
+    updateMedicationReminder: (index: number, reminder: boolean) => Promise<void>;
 
     // Schedule: Day -> List of medications
     schedule: Record<string, string[]>;
@@ -33,6 +42,9 @@ interface UserContextType {
     // Taken Status
     takenRecords: Record<string, boolean>;
     toggleTaken: (recordId: string) => Promise<void>;
+
+    // Refresh user data from Firestore
+    refreshUserData: () => Promise<void>;
 }
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);

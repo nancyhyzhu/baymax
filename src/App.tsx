@@ -4,6 +4,7 @@ import { Header } from './components/Header';
 import { Dashboard } from './pages/Dashboard';
 import { DailySession } from './pages/DailySession';
 import { Settings } from './pages/Settings';
+import { MedicalInfo } from './pages/MedicalInfo';
 import { Login } from './pages/Login';
 import { CreateAccount } from './pages/CreateAccount';
 import { ForgotPassword } from './pages/ForgotPassword';
@@ -32,6 +33,7 @@ function AppContent() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/session" element={<DailySession />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/medical" element={<MedicalInfo />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </div>

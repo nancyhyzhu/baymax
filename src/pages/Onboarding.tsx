@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import { useUser } from '../context/UserContext';
 import './Auth.css';
 import './Onboarding.css';
 
 export const Onboarding: React.FC = () => {
     const navigate = useNavigate();
+    const { refreshUserData } = useUser();
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         age: '',
@@ -35,6 +37,9 @@ export const Onboarding: React.FC = () => {
         time: '',
         reminder: false
     });
+
+    const [conditions, setConditions] = useState<string[]>([]);
+    const [currentCondition, setCurrentCondition] = useState('');
 
     const [error, setError] = useState('');
     const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -82,18 +87,18 @@ export const Onboarding: React.FC = () => {
             }
         }
 
-        if (step === 2) {
-            if (!formData.hasConditions) {
-                setError('Please fill out all required fields');
-                setErrorStep(step);
-                return;
+            if (step === 2) {
+                if (!formData.hasConditions) {
+                    setError('Please fill out all required fields');
+                    setErrorStep(step);
+                    return;
+                }
+                if (formData.hasConditions === 'yes' && conditions.length === 0) {
+                    setError('Please add at least one diagnosed condition');
+                    setErrorStep(step);
+                    return;
+                }
             }
-            if (formData.hasConditions === 'yes' && !formData.conditionDetails) {
-                setError('Please provide details about your conditions');
-                setErrorStep(step);
-                return;
-            }
-        }
 
         if (step === 3) {
             if (!formData.takesMedication) {
@@ -169,7 +174,7 @@ export const Onboarding: React.FC = () => {
                     height: formData.height,
                     weight: formData.weight,
                     sex: formData.sex,
-                    conditions: formData.hasConditions === 'yes' ? formData.conditionDetails : 'None',
+                    conditions: formData.hasConditions === 'yes' ? conditions.join(', ') : 'None',
                     caretakerName: formData.hasCaretaker === 'yes' ? formData.caretakerName : '',
                     caretakerPhone: formData.hasCaretaker === 'yes' ? formData.caretakerPhone : '',
                     email: user.email || ''
@@ -181,11 +186,17 @@ export const Onboarding: React.FC = () => {
                         await setDoc(doc(db, 'medications', `${user.uid}_${med.name}`), {
                             userId: user.uid,
                             name: med.name,
+                            frequency: med.frequency || '',
+                            time: med.time || '',
+                            reminder: med.reminder || false,
                             schedule: [], // Will be populated later via calendar
                             takenHistory: {}
                         });
                     }
                 }
+
+                // Refresh user data in context to immediately reflect changes
+                await refreshUserData();
 
                 navigate('/dashboard', { state: { justLoggedIn: true } });
             } catch (err) {
@@ -255,10 +266,34 @@ export const Onboarding: React.FC = () => {
         setMedications(updatedMedications);
     };
 
+    const handleAddCondition = () => {
+        if (!currentCondition.trim()) {
+            setError('Please enter a condition name');
+            setErrorStep(step);
+            setHasAttemptedSubmit(true);
+            return;
+        }
+        if (conditions.includes(currentCondition.trim())) {
+            setError('This condition is already added');
+            setErrorStep(step);
+            setHasAttemptedSubmit(true);
+            return;
+        }
+        setConditions([...conditions, currentCondition.trim()]);
+        setCurrentCondition('');
+        setError('');
+        setErrorStep(null);
+        setHasAttemptedSubmit(false);
+    };
+
+    const handleDeleteCondition = (index: number) => {
+        setConditions(conditions.filter((_, i) => i !== index));
+    };
+
     return (
         <div className="auth-container onboarding-container">
             <div className="auth-form-section onboarding-section">
-                <div className="auth-card onboarding-card">
+                <div className="onboarding-card">
                     {/* Progress Bar */}
                     <div className="progress-container">
                         <div className="progress-header">
@@ -413,18 +448,73 @@ export const Onboarding: React.FC = () => {
                                 {/* Conditional: Condition Details */}
                                 {formData.hasConditions === 'yes' && (
                                     <div className="medication-section-fade">
-                                        <div className="form-group">
-                                            <label htmlFor="conditionDetails"><LabelWithAsterisk>Please provide details</LabelWithAsterisk></label>
-                                            <textarea
-                                                id="conditionDetails"
-                                                name="conditionDetails"
-                                                value={formData.conditionDetails}
-                                                onChange={handleChange}
-                                                placeholder="Describe your diagnosed conditions"
-                                                rows={3}
-                                                required
-                                                className="form-input"
-                                            />
+                                        {/* Conditions List */}
+                                        {conditions.length > 0 && (
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
+                                                {conditions.map((condition, idx) => (
+                                                    <div key={idx} style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '0.5rem',
+                                                        background: 'var(--color-primary-light)',
+                                                        color: 'var(--color-primary)',
+                                                        padding: '0.25rem 0.75rem',
+                                                        borderRadius: '16px',
+                                                        fontSize: '0.875rem',
+                                                        fontWeight: 500
+                                                    }}>
+                                                        {condition}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDeleteCondition(idx)}
+                                                            style={{
+                                                                background: 'transparent',
+                                                                border: 'none',
+                                                                color: 'var(--color-primary)',
+                                                                cursor: 'pointer',
+                                                                padding: 0,
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                fontSize: '1rem',
+                                                                lineHeight: 1,
+                                                                opacity: 0.7
+                                                            }}
+                                                            title="Remove condition"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Add Condition Form */}
+                                        <div className="add-medication-form">
+                                            <div className="add-medication-title">Add Diagnosis</div>
+                                            <div className="form-group">
+                                                <label htmlFor="currentCondition"><LabelWithAsterisk>Condition Name</LabelWithAsterisk></label>
+                                                <input
+                                                    type="text"
+                                                    id="currentCondition"
+                                                    value={currentCondition}
+                                                    onChange={(e) => setCurrentCondition(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            e.preventDefault();
+                                                            handleAddCondition();
+                                                        }
+                                                    }}
+                                                    placeholder="e.g. Diabetes, Hypertension"
+                                                    className="form-input"
+                                                />
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleAddCondition}
+                                                className="add-medication-btn"
+                                            >
+                                                + Add Diagnosis
+                                            </button>
                                         </div>
                                     </div>
                                 )}

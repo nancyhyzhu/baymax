@@ -1,0 +1,28 @@
+/* Settings Page Styles */
+
+/* Override Auth.css padding for inputs without icons */
+.settings-form-group input.form-input,
+.settings-form-group .form-input,
+.settings-container .form-group input {
+    padding-left: 1rem !important;
+    text-indent: 0 !important;
+}
+
+/* Ensure medication input aligns properly */
+.settings-container .form-group input[type="text"] {
+    padding-left: 1rem !important;
+    text-indent: 0 !important;
+}
+
+/* Ensure add medication form inputs align properly */
+.settings-container .add-medication-form .form-group input.form-input,
+.settings-container .add-medication-form .form-group .form-input {
+    padding-left: 1rem !important;
+    text-indent: 0 !important;
+}
+
+/* Remove input-wrapper padding for time input in settings */
+.settings-container .add-medication-form .input-wrapper input {
+    padding-left: 1rem !important;
+    text-indent: 0 !important;
+}

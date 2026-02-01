@@ -104,9 +104,6 @@ export const Dashboard: React.FC = () => {
                 const brAvg = brValues.length > 0
                     ? brValues.reduce((sum, val) => sum + val, 0) / brValues.length
                     : 18;
-                const moodScore = readings.length > 0
-                    ? readings[readings.length - 1].data.mood
-                    : 7;
 
                 // 4. Analyze results
                 setIsAnalyzing(true);
@@ -114,7 +111,6 @@ export const Dashboard: React.FC = () => {
                     profile,
                     Math.round(hrAvg),
                     Math.round(brAvg),
-                    moodScore,
                     user.uid
                 );
 
@@ -123,7 +119,6 @@ export const Dashboard: React.FC = () => {
                     if (!result.isTypical) {
                         if (result.statName === 'heartbeat') atypicalList.push('Heart Rate');
                         if (result.statName === 'respiration rate') atypicalList.push('Respiration Rate');
-                        if (result.statName === 'mood') atypicalList.push('Mood');
                     }
                 });
 
@@ -299,7 +294,7 @@ export const Dashboard: React.FC = () => {
                             </button>
                             <div style={{ width: '1px', background: '#e5e7eb', margin: '0 0.5rem' }}></div>
                             <button
-                                className={activeTab === 'medications' ? 'primary-btn' : ''}
+                                className=""
                                 onClick={() => setActiveTab('medications')}
                                 style={{ fontSize: '0.8rem', padding: '0.4rem 1rem', display: 'flex', gap: '0.4rem', alignItems: 'center', flex: 1, justifyContent: 'center' }}
                             >

@@ -19,7 +19,6 @@ export interface HealthReading {
   data: {
     heartRate: number;
     breathing: number;
-    mood: number;
   };
 }
 

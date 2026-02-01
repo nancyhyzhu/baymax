@@ -6,7 +6,7 @@ Baymax is a comprehensive personal health companion designed to provide real-tim
 
 - **🧠 Demographics-Aware AI Analysis**: Unlike static thresholds, Baymax uses **Gemini 2.5 Flash** to analyze heart rate and respiration data. It considers your age, sex, weight, and existing conditions to determine if your metrics are statistically typical for *you*.
 - **💊 Intelligent Medication Tracking**: A full scheduling system that handles daily medications, custom frequencies, and persistent "taken" records.
-- **📊 Real-Time Health Visualization**: Interactive charts for Heart Rate, Respiration Rate, and Mood, providing both daily deep-dives and historical trends.
+- **📊 Real-Time Health Visualization**: Interactive charts for Heart Rate and Respiration Rate, providing both daily deep-dives and historical trends.
 - **🏥 Medical Profile Integration**: Quick-entry onboarding for diagnosed conditions and medications, ensuring the AI always has the full clinical picture.
 - **🔒 Secure & Private**: Built on Firebase with secure Authentication and private Firestore data silos.
 

@@ -25,7 +25,7 @@ export interface HealthCheckRequest {
   height: string;
   conditions: string;
   statValue: number;
-  statName: 'heartbeat' | 'respiration rate' | 'mood';
+  statName: 'heartbeat' | 'respiration rate';
   unit: string;
 }
 
@@ -51,10 +51,6 @@ function checkHealthStatThreshold(request: HealthCheckRequest): boolean {
       // Basic respiration ranges
       if (age < 12) return statValue >= 18 && statValue <= 30;
       return statValue >= 12 && statValue <= 20;
-
-    case 'mood':
-      // Mood score 1-10
-      return statValue >= 4 && statValue <= 9;
     
     default:
       return true;
@@ -181,7 +177,6 @@ export async function checkAllHealthStats(
   profile: { sex: string; age: number; weight: string; height: string; conditions: string },
   heartRateAvg: number,
   respirationRateAvg: number,
-  moodScore: number,
   userId?: string
 ): Promise<HealthCheckResponse[]> {
   console.log('🔍 Starting Health Analysis...');
@@ -206,16 +201,6 @@ export async function checkAllHealthStats(
       statValue: respirationRateAvg,
       statName: 'respiration rate',
       unit: 'breaths/min'
-    }, userId),
-    checkHealthStat({
-      sex: profile.sex,
-      age: profile.age,
-      weight: profile.weight,
-      height: profile.height,
-      conditions: profile.conditions,
-      statValue: moodScore,
-      statName: 'mood',
-      unit: 'score (1-10)'
     }, userId)
   ]);
 }

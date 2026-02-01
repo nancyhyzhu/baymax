@@ -1,4 +1,4 @@
-# Baymax Health Dashboard 🩺🤖
+# Baymax Health Monitor 🩺🤖
 
 Baymax is a comprehensive personal health companion designed to provide real-time monitoring, AI-driven health insights, and seamless medication management. Built for speed and accessibility, Baymax combines modern web technologies with the power of Google's Gemini AI to help users understand their health metrics in context.
 

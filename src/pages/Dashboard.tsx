@@ -202,8 +202,8 @@ export const Dashboard: React.FC = () => {
             )}
 
             {/* Controls */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem' }}>
-                {isAnalyzing && (
+            {isAnalyzing && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -226,48 +226,8 @@ export const Dashboard: React.FC = () => {
                         }}></div>
                         Analyzing health stats...
                     </div>
-                )}
-                <button
-                    onClick={() => atypicalMetrics.length > 0 && setShowWarning(true)}
-                    disabled={atypicalMetrics.length === 0}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        padding: '0.5rem 1rem',
-                        background: atypicalMetrics.length > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                        color: atypicalMetrics.length > 0 ? 'var(--color-danger)' : '#10b981',
-                        border: `1px solid ${atypicalMetrics.length > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`,
-                        borderRadius: '8px',
-                        fontSize: '0.9rem',
-                        fontWeight: 600,
-                        cursor: atypicalMetrics.length > 0 ? 'pointer' : 'default',
-                        opacity: atypicalMetrics.length > 0 ? 1 : 0.8
-                    }}
-                >
-                    <Bell size={16} />
-                    {atypicalMetrics.length > 0 ? 'Show Alerts' : 'No Alerts'}
-                </button>
-
-                <div className="glass-panel" style={{ display: 'flex', padding: '0.25rem', gap: '0.25rem' }}>
-                    <button
-                        className={activeTab === 'overview' ? 'primary-btn' : ''}
-                        onClick={() => setActiveTab('overview')}
-                        style={{ fontSize: '0.8rem', padding: '0.4rem 1rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}
-                    >
-                        Weekly View
-                    </button>
-                    <div style={{ width: '1px', background: '#e5e7eb', margin: '0 0.5rem' }}></div>
-                    <button
-                        className={activeTab === 'medications' ? 'primary-btn' : ''}
-                        onClick={() => setActiveTab('medications')}
-                        style={{ fontSize: '0.8rem', padding: '0.4rem 1rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}
-                    >
-                        <CalendarIcon size={14} />
-                        Schedule
-                    </button>
                 </div>
-            </div>
+            )}
 
             {activeTab === 'overview' ? (
                 <div style={{
@@ -304,8 +264,53 @@ export const Dashboard: React.FC = () => {
                             />
                         </div>
                     </div>
-                    <div style={{ height: 'calc(320px + 2rem + 320px)' }}>
-                        <MedicationWidget />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: 'calc(320px + 2rem + 320px)' }}>
+                        <button
+                            onClick={() => atypicalMetrics.length > 0 && setShowWarning(true)}
+                            disabled={atypicalMetrics.length === 0}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.5rem',
+                                padding: '0.5rem 1rem',
+                                background: atypicalMetrics.length > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                color: atypicalMetrics.length > 0 ? 'var(--color-danger)' : '#10b981',
+                                border: `1px solid ${atypicalMetrics.length > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`,
+                                borderRadius: '8px',
+                                fontSize: '0.9rem',
+                                fontWeight: 600,
+                                cursor: atypicalMetrics.length > 0 ? 'pointer' : 'default',
+                                opacity: atypicalMetrics.length > 0 ? 1 : 0.8,
+                                width: '100%'
+                            }}
+                        >
+                            <Bell size={16} />
+                            {atypicalMetrics.length > 0 ? 'Show Alerts' : 'No Alerts'}
+                        </button>
+
+                        <div className="glass-panel" style={{ display: 'flex', padding: '0.25rem', gap: '0.25rem', width: '100%' }}>
+                            <button
+                                className={activeTab === 'overview' ? 'primary-btn' : ''}
+                                onClick={() => setActiveTab('overview')}
+                                style={{ fontSize: '0.8rem', padding: '0.4rem 1rem', display: 'flex', gap: '0.4rem', alignItems: 'center', flex: 1, justifyContent: 'center' }}
+                            >
+                                Weekly View
+                            </button>
+                            <div style={{ width: '1px', background: '#e5e7eb', margin: '0 0.5rem' }}></div>
+                            <button
+                                className={activeTab === 'medications' ? 'primary-btn' : ''}
+                                onClick={() => setActiveTab('medications')}
+                                style={{ fontSize: '0.8rem', padding: '0.4rem 1rem', display: 'flex', gap: '0.4rem', alignItems: 'center', flex: 1, justifyContent: 'center' }}
+                            >
+                                <CalendarIcon size={14} />
+                                Schedule
+                            </button>
+                        </div>
+
+                        <div style={{ flex: 1, minHeight: 0 }}>
+                            <MedicationWidget />
+                        </div>
                     </div>
                 </div>
             ) : (

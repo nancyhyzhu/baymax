@@ -16,6 +16,33 @@ const getGeminiAPI = () => {
   return new GoogleGenerativeAI(apiKey);
 };
 
+/**
+ * Diagnostic tool: List all models available to your API key
+ * This will log the results to your browser console.
+ */
+export async function listAvailableModels() {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) return;
+  
+  console.log('[Gemini Diagnostic] Checking model availability...');
+  
+  try {
+    // Check v1beta
+    const betaResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const betaData = await betaResponse.json();
+    console.log('[Gemini Diagnostic] v1beta Models:', betaData);
+    
+    // Check v1
+    const v1Response = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
+    const v1Data = await v1Response.json();
+    console.log('[Gemini Diagnostic] v1 Models:', v1Data);
+    
+    return { v1beta: betaData, v1: v1Data };
+  } catch (error) {
+    console.error('[Gemini Diagnostic] Failed to list models:', error);
+  }
+}
+
 export interface HealthCheckRequest {
   sex: string;
   age: number;
@@ -123,8 +150,12 @@ export async function checkHealthStat(request: HealthCheckRequest, userId?: stri
   // 2. Try Gemini API
   const genAI = getGeminiAPI();
   if (genAI && isGeminiAvailable) {
-    // We use flash first as it is fastest and least likely to trigger filters
-    const modelNames = ['gemini-1.5-flash', 'gemini-1.5-pro'];
+    // List of models confirmed via diagnostics for this project (Feb 2026)
+    const modelNames = [
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-flash-latest'
+    ];
     
     for (const modelName of modelNames) {
       try {
@@ -161,11 +192,14 @@ export async function checkHealthStat(request: HealthCheckRequest, userId?: stri
       } catch (err: any) {
         console.warn(`[Gemini Error] ${modelName} failed:`, err.message);
         
-        // If the API key is invalid or blocked by an ad-blocker, don't keep trying
+        // If the API key is clearly invalid or blocked by an ad-blocker, disable Gemini for this session
         if (err.message?.includes('API_KEY_INVALID') || err.message?.includes('BLOCKED_BY_CLIENT')) {
+          console.error('[Gemini Critical] API key is invalid or blocked. Switching to threshold fallback.');
           isGeminiAvailable = false;
           break; 
         }
+        
+        // If it's a 404 (model not found), we just move to the next model in the list
       }
     }
   }

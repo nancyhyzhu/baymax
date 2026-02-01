@@ -13,7 +13,7 @@ export const generateWeeklyData = (baseValue: number, variance: number): DataPoi
     return {
       time: day,
       value: Math.round(val),
-      status: Math.random() > 0.8 ? 'atypical' : 'typical'
+      status: 'typical'
     };
   });
 };
@@ -25,7 +25,7 @@ export const generateMonthlyData = (baseValue: number, variance: number): DataPo
     return {
       time: week,
       value: Math.round(val),
-      status: Math.random() > 0.9 ? 'atypical' : 'typical'
+      status: 'typical'
     };
   });
 };

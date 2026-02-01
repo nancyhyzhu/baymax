@@ -5,12 +5,15 @@ import { ExpressionWidget } from '../components/ExpressionWidget';
 import { AtypicalWarningModal } from '../components/AtypicalWarningModal';
 import { MedicationWidget } from '../components/MedicationWidget';
 import { MedicationCalendar } from '../components/MedicationCalendar';
-import { generateWeeklyData, generateMonthlyData, DataPoint } from '../utils/dataUtils';
 import { Bell, Calendar as CalendarIcon } from 'lucide-react';
 import { useUser } from '../context/UserContext';
+import { checkAllHealthStats } from '../services/geminiService';
+import { getHealthReadings } from '../services/healthService';
+import { seedSampleHealthData } from '../utils/seedData';
+import { DataPoint } from '../utils/dataUtils';
 
 export const Dashboard: React.FC = () => {
-    const { profile } = useUser();
+    const { profile, user } = useUser();
     const navigate = useNavigate();
     const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
     const [activeTab, setActiveTab] = useState<'overview' | 'medications'>('overview');
@@ -19,27 +22,94 @@ export const Dashboard: React.FC = () => {
     const [brData, setBrData] = useState<DataPoint[]>([]);
     const [showWarning, setShowWarning] = useState(false);
     const [atypicalMetrics, setAtypicalMetrics] = useState<string[]>([]);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-    // Load Initial Data
+    // Load Initial Data and Analyze with Gemini
     useEffect(() => {
-        const newData = viewMode === 'weekly'
-            ? generateWeeklyData(75, 20)
-            : generateMonthlyData(78, 15);
+        const loadAndAnalyzeData = async () => {
+            // Early return if profile is still loading or really incomplete
+            if (!profile.age || !profile.sex || !user?.uid) {
+                return;
+            }
 
-        const newBrData = viewMode === 'weekly'
-            ? generateWeeklyData(18, 5)
-            : generateMonthlyData(18, 5);
+            try {
+                console.log(`[Dashboard] Fetching data for user: ${user.uid}...`);
+                // 1. Fetch real data from Firestore
+                let readings = await getHealthReadings(user.uid, viewMode === 'weekly' ? 7 : 30);
+                console.log(`[Dashboard] Found ${readings.length} readings.`);
 
-        setHrData(newData);
-        setBrData(newBrData);
+                // 2. Seed data if none exists
+                if (readings.length === 0) {
+                    console.log(`[Dashboard] No data found. Seeding sample data...`);
+                    const seededData = await seedSampleHealthData(user.uid);
+                    if (seededData && seededData.length > 0) {
+                        readings = seededData;
+                        console.log(`[Dashboard] Using ${readings.length} seeded readings.`);
+                    } else {
+                        console.warn(`[Dashboard] Seeding failed or returned no data.`);
+                    }
+                }
 
-        // Calculate atypical metrics for the widget/button, but don't auto-show modal here
-        const atypicalList: string[] = ['Heart Rate', 'Respiration Rate'];
-        if (atypicalList.length > 0) {
-            setAtypicalMetrics(atypicalList);
-        }
+                // 3. Map Firestore data to chart format
+                const mappedHr = readings.map(r => ({
+                    time: new Date(r.timestamp).toLocaleDateString([], { weekday: 'short' }),
+                    value: r.data.heartRate,
+                    status: 'typical' as const
+                }));
 
-    }, [viewMode]);
+                const mappedBr = readings.map(r => ({
+                    time: new Date(r.timestamp).toLocaleDateString([], { weekday: 'short' }),
+                    value: r.data.breathing,
+                    status: 'typical' as const
+                }));
+
+                console.log(`[Dashboard] Mapped data points: HR=${mappedHr.length}, BR=${mappedBr.length}`);
+                setHrData(mappedHr);
+                setBrData(mappedBr);
+
+                // Calculate averages
+                const hrAvg = mappedHr.length > 0
+                    ? mappedHr.reduce((sum, d) => sum + d.value, 0) / mappedHr.length
+                    : 75;
+                const brAvg = mappedBr.length > 0
+                    ? mappedBr.reduce((sum, d) => sum + d.value, 0) / mappedBr.length
+                    : 18;
+                const moodScore = readings.length > 0
+                    ? readings[readings.length - 1].data.mood
+                    : 7;
+
+                // 4. Analyze results
+                setIsAnalyzing(true);
+                const results = await checkAllHealthStats(
+                    profile,
+                    Math.round(hrAvg),
+                    Math.round(brAvg),
+                    moodScore,
+                    user.uid
+                );
+
+                const atypicalList: string[] = [];
+                results.forEach(result => {
+                    if (!result.isTypical) {
+                        if (result.statName === 'heartbeat') atypicalList.push('Heart Rate');
+                        if (result.statName === 'respiration rate') atypicalList.push('Respiration Rate');
+                        if (result.statName === 'mood') atypicalList.push('Mood');
+                    }
+                });
+
+                setAtypicalMetrics(atypicalList);
+                console.log('Analysis complete. Atypical metrics:', atypicalList);
+
+            } catch (error) {
+                console.error('Error loading or analyzing health stats:', error);
+                setAtypicalMetrics([]);
+            } finally {
+                setIsAnalyzing(false);
+            }
+        };
+
+        loadAndAnalyzeData();
+    }, [viewMode, profile, user]);
 
     // Handle initial alert on login
     const location = useLocation();
@@ -51,7 +121,7 @@ export const Dashboard: React.FC = () => {
         }
     }, [location]);
 
-    const handleNotify = () => {
+    const handleNotify = (metricName?: string) => {
         // Check if caretaker exists
         if (!profile.caretakerName || !profile.caretakerPhone) {
             const shouldAddCaretaker = window.confirm(
@@ -64,7 +134,11 @@ export const Dashboard: React.FC = () => {
             return;
         }
 
-        alert(`Caretaker ${profile.caretakerName} (${profile.caretakerPhone}) notified successfully!`);
+        const message = metricName
+            ? `Notifying caretaker ${profile.caretakerName} about atypical ${metricName} readings...`
+            : `Notifying caretaker ${profile.caretakerName} about health alerts...`;
+
+        alert(message);
         setShowWarning(false);
     };
 
@@ -87,6 +161,30 @@ export const Dashboard: React.FC = () => {
 
             {/* Controls */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: '1.5rem', gap: '1rem' }}>
+                {isAnalyzing && (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.5rem 1rem',
+                        background: 'rgba(59, 130, 246, 0.1)',
+                        color: '#3b82f6',
+                        border: '1px solid rgba(59, 130, 246, 0.2)',
+                        borderRadius: '8px',
+                        fontSize: '0.9rem',
+                        fontWeight: 600
+                    }}>
+                        <div className="spinner" style={{
+                            width: '14px',
+                            height: '14px',
+                            border: '2px solid rgba(59, 130, 246, 0.3)',
+                            borderTop: '2px solid #3b82f6',
+                            borderRadius: '50%',
+                            animation: 'spin 1s linear infinite'
+                        }}></div>
+                        Analyzing health stats...
+                    </div>
+                )}
                 <button
                     onClick={() => atypicalMetrics.length > 0 && setShowWarning(true)}
                     disabled={atypicalMetrics.length === 0}
@@ -151,10 +249,12 @@ export const Dashboard: React.FC = () => {
                         color="#ef4444"
                         unit="BPM"
                         averageValue={getAverage(hrData)}
-                        status={hrData.some(d => d.status === 'atypical') ? 'atypical' : 'typical'}
-                        onNotifyCaretaker={() => alert('Notifying caretaker about Heart Rate...')}
+                        status={atypicalMetrics.includes('Heart Rate') ? 'atypical' : 'typical'}
+                        onNotifyCaretaker={() => handleNotify('Heart Rate')}
                     />
-                    <ExpressionWidget expression="neutral" /> {/* Static for now */}
+                    <ExpressionWidget
+                        expression={atypicalMetrics.includes('Mood') ? 'anxious' : 'neutral'}
+                    />
 
                     <GraphCard
                         title="Respiration Rate"
@@ -163,8 +263,8 @@ export const Dashboard: React.FC = () => {
                         color="#3b82f6"
                         unit="Breaths/min"
                         averageValue={getAverage(brData)}
-                        status={brData.some(d => d.status === 'atypical') ? 'atypical' : 'typical'}
-                        onNotifyCaretaker={() => alert('Notifying caretaker about Respiration Rate...')}
+                        status={atypicalMetrics.includes('Respiration Rate') ? 'atypical' : 'typical'}
+                        onNotifyCaretaker={() => handleNotify('Respiration Rate')}
                     />
                     <MedicationWidget />
                 </div>

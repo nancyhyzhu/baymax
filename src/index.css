@@ -107,3 +107,14 @@ button.primary-btn:hover {
 .text-secondary {
   color: var(--text-secondary);
 }
+
+/* Animations */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}

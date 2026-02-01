@@ -220,7 +220,7 @@ export const DailySession: React.FC = () => {
                         }}>
                             <Sparkles size={20} />
                         </div>
-                        AI Session Analysis
+                        Session Analysis
                     </h3>
                     <button
                         onClick={handleRefreshAnalysis}
@@ -272,7 +272,7 @@ export const DailySession: React.FC = () => {
                     opacity: 0.5,
                     fontStyle: 'italic'
                 }}>
-                    *Baymax uses artificial intelligence to summarize statistical data. This is not a medical diagnosis. If you have concerns, please consult a healthcare professional.
+                    *HomeCare uses averages to summarize statistical data. This is not a medical diagnosis. If you have concerns, please consult a healthcare professional.
                 </div>
             </div>
         </div>

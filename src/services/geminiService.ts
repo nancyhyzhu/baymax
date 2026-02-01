@@ -430,24 +430,24 @@ function generateFallbackAnalysis(
   // Analyze breathing rate
   let breathingStatus = '';
   if (breathingAvg >= normalBreathingMin && breathingAvg <= normalBreathingMax) {
-    breathingStatus = 'within the normal resting range';
+    breathingStatus = `within the normal resting range (${normalBreathingMin}-${normalBreathingMax} bpm)`;
   } else if (breathingAvg < normalBreathingMin) {
-    breathingStatus = 'below the normal resting range';
+    breathingStatus = `below the normal resting range (${normalBreathingMin}-${normalBreathingMax} bpm)`;
   } else {
-    breathingStatus = 'above the normal resting range';
+    breathingStatus = `above the normal resting range (${normalBreathingMin}-${normalBreathingMax} bpm)`;
   }
   
   // Analyze pulse
   let pulseStatus = '';
   if (pulseAvg >= normalPulseMin && pulseAvg <= normalPulseMax) {
-    pulseStatus = 'within normal range';
+    pulseStatus = `within normal range (${normalPulseMin}-${normalPulseMax} BPM)`;
     if (pulseAvg > (normalPulseMax - 10)) {
-      pulseStatus = 'on the higher end of normal';
+      pulseStatus = `on the higher end of normal (${normalPulseMin}-${normalPulseMax} BPM)`;
     }
   } else if (pulseAvg < normalPulseMin) {
-    pulseStatus = 'below normal range';
+    pulseStatus = `below normal range (${normalPulseMin}-${normalPulseMax} BPM)`;
   } else {
-    pulseStatus = 'above normal range';
+    pulseStatus = `above normal range (${normalPulseMin}-${normalPulseMax} BPM)`;
   }
   
   // Check for fluctuations (variability)
@@ -459,7 +459,7 @@ function generateFallbackAnalysis(
   let caretakerNote = '';
   
   if (hasHighVariability) {
-    variabilityNote = ` However, your pulse data shows significant fluctuations. While an average of ${pulseAvg} BPM is ${pulseStatus} (${normalPulseMin}–${normalPulseMax} BPM), the minimum of ${pulseMin} BPM and maximum of ${pulseMax} BPM indicate high variability.`;
+    variabilityNote = ` Note that it shows significant fluctuations. The minimum of ${pulseMin} BPM and maximum of ${pulseMax} BPM indicate high variability.`;
     
     if (pulseMin < 50) {
       variabilityNote += ` The drop to ${pulseMin} BPM is notably low, unless occurring during deep sleep or athletic conditioning.`;
@@ -473,8 +473,11 @@ function generateFallbackAnalysis(
   const breathingRangeStr = breathingMin === breathingMax 
     ? `${breathingAvg} bpm` 
     : `${breathingMin}–${breathingMax} bpm`;
+  const pulseRangeStr = pulseMin === pulseMax 
+    ? `${pulseAvg} BPM` 
+    : `${pulseMin}–${pulseMax} BPM`;
   
-  return `For a ${age}-year-old ${sex}, your breathing rate (${breathingRangeStr}) is ${breathingStatus}.${variabilityNote}${caretakerNote}`;
+  return `For a ${age}-year-old ${sex}, your breathing rate (${breathingRangeStr}) is ${breathingStatus}. Your pulse (${pulseRangeStr}) is ${pulseStatus}.${variabilityNote}${caretakerNote}`;
 }
 
 /**

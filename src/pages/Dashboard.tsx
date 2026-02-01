@@ -22,7 +22,7 @@ export const Dashboard: React.FC = () => {
     const [brData, setBrData] = useState<DataPoint[]>([]);
     const [showWarning, setShowWarning] = useState(false);
     const [atypicalMetrics, setAtypicalMetrics] = useState<string[]>([]);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(true); // Start as true to prevent early alerts
 
     // Load Initial Data and Analyze with Gemini
     useEffect(() => {
@@ -111,15 +111,24 @@ export const Dashboard: React.FC = () => {
         loadAndAnalyzeData();
     }, [viewMode, profile, user]);
 
-    // Handle initial alert on login
+    // Handle initial alert on login - only if analysis is done and finds issues
     const location = useLocation();
+    const [hasAttemptedInitialAlert, setHasAttemptedInitialAlert] = useState(false);
+
     useEffect(() => {
-        if (location.state?.justLoggedIn) {
-            setShowWarning(true);
+        // Only trigger if data has loaded, analysis is finished, and it's a login event
+        if (location.state?.justLoggedIn && !isAnalyzing && !hasAttemptedInitialAlert && hrData.length > 0) {
+            if (atypicalMetrics.length > 0) {
+                console.log('[Dashboard] Initial login alert triggered for metrics:', atypicalMetrics);
+                setShowWarning(true);
+            } else {
+                console.log('[Dashboard] No atypical metrics found on login. Skipping alert.');
+            }
+            setHasAttemptedInitialAlert(true);
             // Clear the state so it doesn't reappear on refresh
             window.history.replaceState({}, document.title);
         }
-    }, [location]);
+    }, [location, atypicalMetrics, isAnalyzing, hasAttemptedInitialAlert, hrData]);
 
     const handleNotify = (metricName?: string) => {
         // Check if caretaker exists

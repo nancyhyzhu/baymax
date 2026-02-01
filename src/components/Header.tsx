@@ -45,7 +45,7 @@ export const Header: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <img
           src="/logo (1).png"
-          alt="Baymax"
+          alt="HomeCare"
           style={{
             width: '40px',
             height: '40px',
@@ -53,7 +53,7 @@ export const Header: React.FC = () => {
           }}
         />
         <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--text-main)' }}>
-          Baymax <span style={{ opacity: 0.5, fontWeight: 400 }}>Health Monitor</span>
+          HomeCare
         </h1>
       </div>
 

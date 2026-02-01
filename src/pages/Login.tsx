@@ -53,7 +53,7 @@ export const Login: React.FC = () => {
                 <div className="auth-card">
                     <div className="auth-header">
                         <div className="logo-container">
-                            <img src="/logo (1).png" alt="Baymax" className="logo-icon" />
+                            <img src="/logo (1).png" alt="HomeCare" className="logo-icon" />
                         </div>
                         <h2>Welcome Back</h2>
                         <p className="welcome-text">Please enter your details to sign in.</p>

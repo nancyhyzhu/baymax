@@ -61,9 +61,18 @@ export const GraphCard: React.FC<GraphCardProps> = ({
 
             <div style={{ flex: 1, width: '100%', minHeight: 0 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data}>
+                    <LineChart data={data} margin={{ top: 5, right: 30, left: 30, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" opacity={0.1} vertical={false} />
-                        <XAxis dataKey="time" stroke="var(--text-secondary)" tick={{ fontSize: 12, fill: 'var(--text-secondary)' }} />
+                        <XAxis 
+                            dataKey="time" 
+                            stroke="var(--text-secondary)" 
+                            tick={{ fontSize: 12, fill: 'var(--text-secondary)' }}
+                            interval={0}
+                            angle={0}
+                            textAnchor="middle"
+                            domain={['Mon', 'Sun']}
+                            type="category"
+                        />
                         <YAxis domain={['auto', 'auto']} hide />
                         <Tooltip
                             contentStyle={{

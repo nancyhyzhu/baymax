@@ -79,7 +79,7 @@ export const CreateAccount: React.FC = () => {
                 <div className="auth-card">
                     <div className="auth-header">
                         <div className="logo-container">
-                            <img src="/logo (1).png" alt="Baymax" className="logo-icon" />
+                            <img src="/logo (1).png" alt="HomeCare" className="logo-icon" />
                         </div>
                         <h2>Create Account</h2>
                         <p className="welcome-text">Fill in your details to create your account.</p>

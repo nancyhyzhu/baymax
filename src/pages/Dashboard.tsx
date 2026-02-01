@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { GraphCard } from '../components/GraphCard';
-import { ExpressionWidget } from '../components/ExpressionWidget';
 import { AtypicalWarningModal } from '../components/AtypicalWarningModal';
 import { MedicationWidget } from '../components/MedicationWidget';
 import { MedicationCalendar } from '../components/MedicationCalendar';
@@ -9,13 +8,11 @@ import { Bell, Calendar as CalendarIcon } from 'lucide-react';
 import { useUser } from '../context/UserContext';
 import { checkAllHealthStats } from '../services/geminiService';
 import { getHealthReadings } from '../services/healthService';
-import { seedSampleHealthData } from '../utils/seedData';
 import { DataPoint } from '../utils/dataUtils';
 
 export const Dashboard: React.FC = () => {
     const { profile, user } = useUser();
     const navigate = useNavigate();
-    const [viewMode, setViewMode] = useState<'weekly' | 'monthly'>('weekly');
     const [activeTab, setActiveTab] = useState<'overview' | 'medications'>('overview');
 
     const [hrData, setHrData] = useState<DataPoint[]>([]);
@@ -34,8 +31,8 @@ export const Dashboard: React.FC = () => {
 
             try {
                 console.log(`[Dashboard] Fetching data for user: ${user.uid}...`);
-                // 1. Fetch real data from Firestore
-                let readings = await getHealthReadings(user.uid, viewMode === 'weekly' ? 7 : 30);
+                // 1. Fetch real data from Firestore (weekly view only - 7 days)
+                let readings = await getHealthReadings(user.uid, 7);
                 console.log(`[Dashboard] Found ${readings.length} readings.`);
 
                 // 2. Seed data if none exists
@@ -43,29 +40,69 @@ export const Dashboard: React.FC = () => {
                     return;
                 }
 
-                // 3. Map Firestore data to chart format
-                const mappedHr = readings.map(r => ({
-                    time: new Date(r.timestamp).toLocaleDateString([], { weekday: 'short' }),
-                    value: r.data.heartRate,
-                    status: 'typical' as const
-                }));
+                // 3. Map Firestore data to chart format - weekly view only
+                // Create a full week structure with all 7 days
+                const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                
+                // Group readings by day of week
+                const readingsByDay: { [key: string]: typeof readings } = {};
+                readings.forEach(r => {
+                    const date = new Date(r.timestamp);
+                    const dayIndex = (date.getDay() + 6) % 7; // Convert Sunday=0 to Monday=0
+                    const dayName = weekDays[dayIndex];
+                    if (!readingsByDay[dayName]) {
+                        readingsByDay[dayName] = [];
+                    }
+                    readingsByDay[dayName].push(r);
+                });
 
-                const mappedBr = readings.map(r => ({
-                    time: new Date(r.timestamp).toLocaleDateString([], { weekday: 'short' }),
-                    value: r.data.breathing,
-                    status: 'typical' as const
-                }));
+                // Create data points for all 7 days, using average for days with multiple readings
+                const mappedHr = weekDays.map(day => {
+                    const dayReadings = readingsByDay[day] || [];
+                    if (dayReadings.length === 0) {
+                        return {
+                            time: day,
+                            value: null as any,
+                            status: 'typical' as const
+                        };
+                    }
+                    const avgValue = dayReadings.reduce((sum, r) => sum + r.data.heartRate, 0) / dayReadings.length;
+                    return {
+                        time: day,
+                        value: Math.round(avgValue),
+                        status: 'typical' as const
+                    };
+                });
+
+                const mappedBr = weekDays.map(day => {
+                    const dayReadings = readingsByDay[day] || [];
+                    if (dayReadings.length === 0) {
+                        return {
+                            time: day,
+                            value: null as any,
+                            status: 'typical' as const
+                        };
+                    }
+                    const avgValue = dayReadings.reduce((sum, r) => sum + r.data.breathing, 0) / dayReadings.length;
+                    return {
+                        time: day,
+                        value: Math.round(avgValue),
+                        status: 'typical' as const
+                    };
+                });
 
                 console.log(`[Dashboard] Mapped data points: HR=${mappedHr.length}, BR=${mappedBr.length}`);
                 setHrData(mappedHr);
                 setBrData(mappedBr);
 
-                // Calculate averages
-                const hrAvg = mappedHr.length > 0
-                    ? mappedHr.reduce((sum, d) => sum + d.value, 0) / mappedHr.length
+                // Calculate averages (excluding null values)
+                const hrValues = mappedHr.filter(d => d.value !== null).map(d => d.value);
+                const hrAvg = hrValues.length > 0
+                    ? hrValues.reduce((sum, val) => sum + val, 0) / hrValues.length
                     : 75;
-                const brAvg = mappedBr.length > 0
-                    ? mappedBr.reduce((sum, d) => sum + d.value, 0) / mappedBr.length
+                const brValues = mappedBr.filter(d => d.value !== null).map(d => d.value);
+                const brAvg = brValues.length > 0
+                    ? brValues.reduce((sum, val) => sum + val, 0) / brValues.length
                     : 18;
                 const moodScore = readings.length > 0
                     ? readings[readings.length - 1].data.mood
@@ -102,7 +139,7 @@ export const Dashboard: React.FC = () => {
         };
 
         loadAndAnalyzeData();
-    }, [viewMode, profile, user]);
+    }, [profile, user]);
 
     // Handle initial alert on login - only if analysis is done and finds issues
     const location = useLocation();
@@ -146,8 +183,11 @@ export const Dashboard: React.FC = () => {
 
     const getAverage = (data: DataPoint[]) => {
         if (data.length === 0) return 0;
-        const sum = data.reduce((acc, curr) => acc + curr.value, 0);
-        return sum / data.length;
+        // Filter out null values and calculate average only from actual data points
+        const validData = data.filter(d => d.value !== null && d.value !== undefined);
+        if (validData.length === 0) return 0;
+        const sum = validData.reduce((acc, curr) => acc + curr.value, 0);
+        return sum / validData.length;
     };
 
     return (
@@ -211,18 +251,11 @@ export const Dashboard: React.FC = () => {
 
                 <div className="glass-panel" style={{ display: 'flex', padding: '0.25rem', gap: '0.25rem' }}>
                     <button
-                        className={activeTab === 'overview' && viewMode === 'weekly' ? 'primary-btn' : ''}
-                        onClick={() => { setActiveTab('overview'); setViewMode('weekly'); }}
+                        className={activeTab === 'overview' ? 'primary-btn' : ''}
+                        onClick={() => setActiveTab('overview')}
                         style={{ fontSize: '0.8rem', padding: '0.4rem 1rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}
                     >
-                        Weekly
-                    </button>
-                    <button
-                        className={activeTab === 'overview' && viewMode === 'monthly' ? 'primary-btn' : ''}
-                        onClick={() => { setActiveTab('overview'); setViewMode('monthly'); }}
-                        style={{ fontSize: '0.8rem', padding: '0.4rem 1rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}
-                    >
-                        Monthly
+                        Weekly View
                     </button>
                     <div style={{ width: '1px', background: '#e5e7eb', margin: '0 0.5rem' }}></div>
                     <button
@@ -239,36 +272,41 @@ export const Dashboard: React.FC = () => {
             {activeTab === 'overview' ? (
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-                    gridAutoRows: '320px',
+                    gridTemplateColumns: '70% 30%',
                     gap: '2rem',
-                    marginBottom: '2rem'
+                    marginBottom: '2rem',
+                    marginRight: '2rem',
+                    alignItems: 'stretch'
                 }}>
-                    <GraphCard
-                        title="Heart Rate"
-                        data={hrData}
-                        dataKey="value"
-                        color="#ef4444"
-                        unit="BPM"
-                        averageValue={getAverage(hrData)}
-                        status={atypicalMetrics.includes('Heart Rate') ? 'atypical' : 'typical'}
-                        onNotifyCaretaker={() => handleNotify('Heart Rate')}
-                    />
-                    <ExpressionWidget
-                        expression={atypicalMetrics.includes('Mood') ? 'anxious' : 'neutral'}
-                    />
-
-                    <GraphCard
-                        title="Respiration Rate"
-                        data={brData}
-                        dataKey="value"
-                        color="#3b82f6"
-                        unit="Breaths/min"
-                        averageValue={getAverage(brData)}
-                        status={atypicalMetrics.includes('Respiration Rate') ? 'atypical' : 'typical'}
-                        onNotifyCaretaker={() => handleNotify('Respiration Rate')}
-                    />
-                    <MedicationWidget />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                        <div style={{ height: '320px' }}>
+                            <GraphCard
+                                title="Heart Rate"
+                                data={hrData}
+                                dataKey="value"
+                                color="#ef4444"
+                                unit="BPM"
+                                averageValue={getAverage(hrData)}
+                                status={atypicalMetrics.includes('Heart Rate') ? 'atypical' : 'typical'}
+                                onNotifyCaretaker={() => handleNotify('Heart Rate')}
+                            />
+                        </div>
+                        <div style={{ height: '320px' }}>
+                            <GraphCard
+                                title="Respiration Rate"
+                                data={brData}
+                                dataKey="value"
+                                color="#3b82f6"
+                                unit="Breaths/min"
+                                averageValue={getAverage(brData)}
+                                status={atypicalMetrics.includes('Respiration Rate') ? 'atypical' : 'typical'}
+                                onNotifyCaretaker={() => handleNotify('Respiration Rate')}
+                            />
+                        </div>
+                    </div>
+                    <div style={{ height: 'calc(320px + 2rem + 320px)' }}>
+                        <MedicationWidget />
+                    </div>
                 </div>
             ) : (
                 <div style={{ height: 'calc(100vh - 200px)', paddingBottom: '2rem' }}>

@@ -73,7 +73,7 @@ export const DailySession: React.FC = () => {
                 </div>
                 <h2>No Session Data for Today</h2>
                 <p style={{ opacity: 0.7, maxWidth: '400px' }}>
-                    You haven't completed your daily check-in yet. Please open the Baymax Mobile App on your phone to start recording your session.
+                    You haven't completed your daily check-in yet. Please open the HomeCare Mobile App on your phone to start recording your session.
                 </p>
             </div>
         );

@@ -3,18 +3,50 @@ import { useUser } from '../context/UserContext';
 import { CheckSquare, Square } from 'lucide-react';
 
 export const MedicationWidget: React.FC = () => {
-    const { schedule, takenRecords, toggleTaken } = useUser();
+    const { schedule, takenRecords, toggleTaken, medicationDetails } = useUser();
 
     const todayDate = new Date();
     const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = days[todayDate.getDay()];
     const dateStr = todayDate.toLocaleDateString('en-CA'); // YYYY-MM-DD
 
-    const todaysMeds = schedule[dayName] || [];
+    // Get medications from schedule (if manually scheduled via calendar)
+    const scheduledMeds = schedule[dayName] || [];
 
-    // Filter duplicates if needed, or just show all instances (e.g. taken multiple times a day)
-    // The context stores strings. If a med is in the array twice, it appears twice.
-    // We need unique IDs ideally, but index works for simple list.
+    // Get medications from database that should be shown today - only those with reminder enabled
+    const medsFromDatabase = medicationDetails
+        .filter(med => {
+            if (!med.name) return false;
+            
+            // Only show medications that have reminder enabled
+            if (!med.reminder) return false;
+            
+            // Must have frequency and time set for reminder to work
+            if (!med.frequency || !med.time) return false;
+            
+            // Show daily medications every day
+            if (med.frequency === 'daily') {
+                return true;
+            }
+            
+            // Show weekly medications every day (user can take them any day)
+            // You can enhance this to show only on specific days if needed
+            if (med.frequency === 'weekly') {
+                return true;
+            }
+            
+            // Show "as-needed" medications if they have a time set
+            if (med.frequency === 'as-needed') {
+                return true;
+            }
+            
+            return false;
+        })
+        .map(med => med.name);
+
+    // Combine scheduled meds and database meds, removing duplicates
+    const allMedsSet = new Set([...scheduledMeds, ...medsFromDatabase]);
+    const todaysMeds = Array.from(allMedsSet);
 
     return (
         <div className="glass-panel" style={{ padding: '1.5rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -37,6 +69,8 @@ export const MedicationWidget: React.FC = () => {
                         {todaysMeds.map((med, idx) => {
                             const uniqueKey = `${dateStr}_${med}_${idx}`; // Simple unique key for today/index
                             const isTaken = !!takenRecords[uniqueKey];
+                            // Find medication details from database
+                            const medDetails = medicationDetails.find(m => m.name === med);
 
                             return (
                                 <div
@@ -44,6 +78,7 @@ export const MedicationWidget: React.FC = () => {
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
+                                        justifyContent: 'space-between',
                                         gap: '0.75rem',
                                         padding: '0.75rem',
                                         background: isTaken ? 'rgba(16, 185, 129, 0.1)' : 'var(--input-bg)',
@@ -53,25 +88,38 @@ export const MedicationWidget: React.FC = () => {
                                         opacity: isTaken ? 0.7 : 1
                                     }}
                                 >
-                                    <button
-                                        onClick={() => toggleTaken(uniqueKey)} // Using index in key to distinguish duplicates
-                                        style={{
-                                            background: 'transparent',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            padding: 0,
-                                            display: 'flex',
-                                            color: isTaken ? '#10b981' : 'var(--text-main)'
-                                        }}
-                                    >
-                                        {isTaken ? <CheckSquare size={20} /> : <Square size={20} />}
-                                    </button>
-                                    <span style={{
-                                        textDecoration: isTaken ? 'line-through' : 'none',
-                                        fontWeight: 500
-                                    }}>
-                                        {med}
-                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+                                        <button
+                                            onClick={() => toggleTaken(uniqueKey)}
+                                            style={{
+                                                background: 'transparent',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                padding: 0,
+                                                display: 'flex',
+                                                color: isTaken ? '#10b981' : 'var(--text-main)'
+                                            }}
+                                        >
+                                            {isTaken ? <CheckSquare size={20} /> : <Square size={20} />}
+                                        </button>
+                                        <span style={{
+                                            textDecoration: isTaken ? 'line-through' : 'none',
+                                            fontWeight: 500,
+                                            fontSize: '1rem'
+                                        }}>
+                                            {med}
+                                        </span>
+                                    </div>
+                                    {medDetails && medDetails.time && (
+                                        <span style={{ 
+                                            fontSize: '0.9rem', 
+                                            opacity: 0.7,
+                                            color: 'var(--text-secondary)',
+                                            whiteSpace: 'nowrap'
+                                        }}>
+                                            {medDetails.time}
+                                        </span>
+                                    )}
                                 </div>
                             );
                         })}

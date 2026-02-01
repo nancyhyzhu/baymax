@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { User, Activity, Calendar, Settings, LogOut } from 'lucide-react';
+import { User, Activity, Calendar, Settings, LogOut, Heart } from 'lucide-react';
 import { useUser } from '../context/UserContext';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -65,6 +65,10 @@ export const Header: React.FC = () => {
         <NavLink to="/session" style={linkStyle}>
           <Calendar size={18} />
           Daily Session
+        </NavLink>
+        <NavLink to="/medical" style={linkStyle}>
+          <Heart size={18} />
+          Medical Info
         </NavLink>
         <NavLink to="/settings" style={linkStyle}>
           <Settings size={18} />

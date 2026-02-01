@@ -21,6 +21,12 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [loading, setLoading] = useState(true);
     const [profile, setProfile] = useState(defaultProfile);
     const [medications, setMedications] = useState<string[]>([]);
+    const [medicationDetails, setMedicationDetails] = useState<Array<{
+        name: string;
+        frequency: string;
+        time: string;
+        reminder: boolean;
+    }>>([]);
     const [schedule, setSchedule] = useState<Record<string, string[]>>({});
     const [takenRecords, setTakenRecords] = useState<Record<string, boolean>>({});
 
@@ -34,6 +40,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             } else {
                 setProfile(defaultProfile);
                 setMedications([]);
+                setMedicationDetails([]);
                 setSchedule({});
                 setTakenRecords({});
             }
@@ -68,6 +75,12 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             const querySnapshot = await getDocs(q);
 
             const newMeds: string[] = [];
+            const newMedicationDetails: Array<{
+                name: string;
+                frequency: string;
+                time: string;
+                reminder: boolean;
+            }> = [];
             const newSchedule: Record<string, string[]> = {};
             // Initialize schedule days to avoid undefined
             ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].forEach(d => newSchedule[d] = []);
@@ -78,6 +91,14 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 const data = doc.data();
                 const medName = data.name;
                 newMeds.push(medName);
+
+                // Store medication details
+                newMedicationDetails.push({
+                    name: medName,
+                    frequency: data.frequency || '',
+                    time: data.time || '',
+                    reminder: data.reminder || false
+                });
 
                 // Populate Schedule
                 if (data.schedule && Array.isArray(data.schedule)) {
@@ -106,6 +127,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             });
 
             setMedications(newMeds);
+            setMedicationDetails(newMedicationDetails);
             setSchedule(newSchedule);
             setTakenRecords(newTakenRecords);
 
@@ -143,6 +165,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         // Optimistic
         setMedications(prev => prev.filter(m => m !== med));
+        setMedicationDetails(prev => prev.filter(m => m.name !== med));
         setSchedule(prev => {
             const newSchedule = { ...prev };
             Object.keys(newSchedule).forEach(day => {
@@ -157,6 +180,61 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const snapshot = await getDocs(q);
         snapshot.forEach(async (d) => {
             await deleteDoc(doc(db, 'medications', d.id));
+        });
+    };
+
+    const addMedicationWithDetails = async (med: { name: string; frequency: string; time: string; reminder: boolean }) => {
+        if (!user) return;
+        if (medications.includes(med.name)) return;
+
+        // Optimistic update
+        setMedications(prev => [...prev, med.name]);
+        setMedicationDetails(prev => [...prev, med]);
+
+        // Add to Firestore
+        await setDoc(doc(db, 'medications', `${user.uid}_${med.name}`), {
+            userId: user.uid,
+            name: med.name,
+            frequency: med.frequency || '',
+            time: med.time || '',
+            reminder: med.reminder || false,
+            schedule: [],
+            takenHistory: {}
+        });
+    };
+
+    const removeMedicationByIndex = async (index: number) => {
+        if (!user) return;
+        const medToRemove = medicationDetails[index];
+        if (!medToRemove) return;
+
+        // Optimistic
+        setMedications(prev => prev.filter(m => m !== medToRemove.name));
+        setMedicationDetails(prev => prev.filter((_, i) => i !== index));
+        setSchedule(prev => {
+            const newSchedule = { ...prev };
+            Object.keys(newSchedule).forEach(day => {
+                newSchedule[day] = newSchedule[day].filter(m => m !== medToRemove.name);
+            });
+            return newSchedule;
+        });
+
+        // Delete from Firestore
+        await deleteDoc(doc(db, 'medications', `${user.uid}_${medToRemove.name}`));
+    };
+
+    const updateMedicationReminder = async (index: number, reminder: boolean) => {
+        if (!user) return;
+        const med = medicationDetails[index];
+        if (!med) return;
+
+        // Optimistic update
+        setMedicationDetails(prev => prev.map((m, i) => i === index ? { ...m, reminder } : m));
+
+        // Update Firestore
+        const medRef = doc(db, 'medications', `${user.uid}_${med.name}`);
+        await updateDoc(medRef, {
+            reminder: reminder
         });
     };
 
@@ -249,6 +327,13 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    // Refresh user data from Firestore (useful after onboarding or profile updates)
+    const refreshUserData = async () => {
+        if (user) {
+            await fetchUserData(user.uid);
+        }
+    };
+
     return (
         <UserContext.Provider value={{
             user,
@@ -256,13 +341,18 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             profile,
             updateProfile,
             medications,
+            medicationDetails,
             addMedication,
+            addMedicationWithDetails,
             removeMedication,
+            removeMedicationByIndex,
+            updateMedicationReminder,
             schedule,
             addToSchedule,
             removeFromSchedule,
             takenRecords,
-            toggleTaken
+            toggleTaken,
+            refreshUserData
         }}>
             {children}
         </UserContext.Provider>

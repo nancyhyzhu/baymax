@@ -44,7 +44,7 @@ export const Header: React.FC = () => {
       {/* ... Logo section unchanged ... */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <img
-          src="/logo (1).png"
+          src="logo.png"
           alt="HomeCare"
           style={{
             width: '40px',

@@ -58,7 +58,7 @@ export const ResetPassword: React.FC = () => {
                 <div className="auth-card">
                     <div className="auth-header">
                         <div className="logo-container">
-                            <img src="/logo (1).png" alt="HomeCare" className="logo-icon" />
+                            <img src="logo.png" alt="HomeCare" className="logo-icon" />
                             <span className="logo-text" style={{ fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--text-main)' }}>HomeCare</span>
                         </div>
                         <h2>Reset Password</h2>

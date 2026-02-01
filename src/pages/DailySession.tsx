@@ -1,20 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { Share2, Smartphone, CheckSquare, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Share2, Smartphone, CheckSquare, Sparkles, RefreshCw } from 'lucide-react';
 import { useUser } from '../context/UserContext';
 import { getLatestAnalyticsSession, AnalyticsSession } from '../services/healthService';
 import { analyzeSessionStats } from '../services/geminiService';
 
 export const DailySession: React.FC = () => {
-    const { profile, user } = useUser();
+    const { profile, user, loading: userLoading } = useUser();
     const [latestSession, setLatestSession] = useState<AnalyticsSession | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [notifyCaretaker, setNotifyCaretaker] = useState(true);
     const [aiAnalysis, setAiAnalysis] = useState<string>('');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const analyzedSessionIdRef = useRef<string | null>(null);
+    const isAnalyzingRef = useRef(false);
 
     useEffect(() => {
         const loadData = async () => {
+            // Wait for user data to be loaded
+            if (userLoading) return;
             if (!user?.uid) return;
+            // Check if profile is actually loaded (not just default values)
+            if (!profile.age || !profile.sex) return;
+            if (isAnalyzingRef.current) return; // Prevent duplicate calls
+            
             setIsLoading(true);
             try {
                 const session = await getLatestAnalyticsSession();
@@ -29,18 +37,29 @@ export const DailySession: React.FC = () => {
                         sessionDate.getFullYear() === today.getFullYear();
 
                     if (isToday) {
-                        setLatestSession(session);
-
-                        // Trigger AI Analysis for this session
-                        setIsAnalyzing(true);
-                        try {
-                            const analysis = await analyzeSessionStats(profile, session as any);
-                            setAiAnalysis(analysis);
-                        } finally {
-                            setIsAnalyzing(false);
+                        const sessionId = session.sessionId || `${session.processedAt.toMillis()}_${session.pulse.average}_${session.breathing.average}`;
+                        
+                        // Only analyze if we haven't analyzed this session yet
+                        if (analyzedSessionIdRef.current !== sessionId && !isAnalyzingRef.current) {
+                            setLatestSession(session);
+                            analyzedSessionIdRef.current = sessionId;
+                            
+                            // Trigger AI Analysis for this session
+                            isAnalyzingRef.current = true;
+                            setIsAnalyzing(true);
+                            try {
+                                const analysis = await analyzeSessionStats(profile, session as any, user.uid);
+                                setAiAnalysis(analysis);
+                            } finally {
+                                setIsAnalyzing(false);
+                                isAnalyzingRef.current = false;
+                            }
+                        } else {
+                            setLatestSession(session);
                         }
                     } else {
                         setLatestSession(null);
+                        analyzedSessionIdRef.current = null;
                     }
                 }
             } catch (error) {
@@ -50,10 +69,27 @@ export const DailySession: React.FC = () => {
             }
         };
         loadData();
-    }, [user, profile]);
+    }, [user?.uid, userLoading, profile.age, profile.sex]); // Wait for profile to be loaded
 
     const handleShare = () => {
         alert(`Session Report sent to Caretaker.\nAuto-notify is ${notifyCaretaker ? 'ON' : 'OFF'}.`);
+    };
+
+    const handleRefreshAnalysis = async () => {
+        if (!latestSession || isAnalyzingRef.current || !user?.uid) return;
+        isAnalyzingRef.current = true;
+        setIsAnalyzing(true);
+        setAiAnalysis('');
+        try {
+            const analysis = await analyzeSessionStats(profile, latestSession as any, user.uid);
+            setAiAnalysis(analysis);
+        } catch (error) {
+            console.error("Error refreshing analysis:", error);
+            setAiAnalysis("Unable to generate AI analysis at this time. Please try again later.");
+        } finally {
+            setIsAnalyzing(false);
+            isAnalyzingRef.current = false;
+        }
     };
 
     if (isLoading) {
@@ -170,21 +206,43 @@ export const DailySession: React.FC = () => {
 
             {/* Right Column: AI Analysis */}
             <div className="glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '0 0 1.5rem 0' }}>
-                    <div style={{
-                        background: 'linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%)',
-                        color: 'white',
-                        padding: '0.5rem',
-                        borderRadius: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)'
-                    }}>
-                        <Sparkles size={20} />
-                    </div>
-                    AI Session Analysis
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: 0 }}>
+                        <div style={{
+                            background: 'linear-gradient(135deg, #3b82f6 0%, #2dd4bf 100%)',
+                            color: 'white',
+                            padding: '0.5rem',
+                            borderRadius: '10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)'
+                        }}>
+                            <Sparkles size={20} />
+                        </div>
+                        AI Session Analysis
+                    </h3>
+                    <button
+                        onClick={handleRefreshAnalysis}
+                        disabled={isAnalyzing || !latestSession}
+                        style={{
+                            background: 'transparent',
+                            border: '1px solid rgba(59, 130, 246, 0.3)',
+                            borderRadius: '8px',
+                            padding: '0.5rem',
+                            cursor: isAnalyzing || !latestSession ? 'not-allowed' : 'pointer',
+                            opacity: isAnalyzing || !latestSession ? 0.5 : 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#3b82f6',
+                            transition: 'all 0.2s'
+                        }}
+                        title="Refresh AI analysis"
+                    >
+                        <RefreshCw size={18} style={{ animation: isAnalyzing ? 'spin 1s linear infinite' : undefined }} />
+                    </button>
+                </div>
 
                 {isAnalyzing ? (
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', opacity: 0.6 }}>

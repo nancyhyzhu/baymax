@@ -63,15 +63,13 @@ export const GraphCard: React.FC<GraphCardProps> = ({
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={data} margin={{ top: 5, right: 30, left: 30, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" opacity={0.1} vertical={false} />
-                        <XAxis 
-                            dataKey="time" 
-                            stroke="var(--text-secondary)" 
+                        <XAxis
+                            dataKey="time"
+                            stroke="var(--text-secondary)"
                             tick={{ fontSize: 12, fill: 'var(--text-secondary)' }}
                             interval={0}
                             angle={0}
                             textAnchor="middle"
-                            domain={['Mon', 'Sun']}
-                            type="category"
                         />
                         <YAxis domain={['auto', 'auto']} hide />
                         <Tooltip
@@ -93,6 +91,7 @@ export const GraphCard: React.FC<GraphCardProps> = ({
                             dot={false}
                             activeDot={{ r: 6, strokeWidth: 0 }}
                             animationDuration={500}
+                            connectNulls={true}
                         />
                     </LineChart>
                 </ResponsiveContainer>

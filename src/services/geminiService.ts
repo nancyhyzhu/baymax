@@ -34,6 +34,19 @@ export interface HealthCheckResponse {
   statName: string;
 }
 
+export interface SessionStats {
+  breathing: {
+    average: number;
+    max: number;
+    min: number;
+  };
+  pulse: {
+    average: number;
+    max: number;
+    min: number;
+  };
+}
+
 /**
  * Threshold-based health analysis (reliable fallback)
  */
@@ -203,4 +216,55 @@ export async function checkAllHealthStats(
       unit: 'breaths/min'
     }, userId)
   ]);
+}
+
+/**
+ * Summarize and analyze a full session's statistics using Gemini
+ */
+export async function analyzeSessionStats(
+  profile: { sex: string; age: number; weight: string; height: string; conditions: string },
+  stats: SessionStats
+): Promise<string> {
+  const genAI = getGeminiAPI();
+  if (!genAI || !isGeminiAvailable) {
+    return "AI analysis is currently unavailable. Please review your session stats manually below.";
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-2.5-flash',
+      safetySettings: [
+        { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+        { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      ],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 250 }
+    });
+
+    const prompt = `Act as a clinical data analyzer. 
+        User Profile: ${profile.sex}, ${profile.age}yo, ${profile.weight}kg, ${profile.height}cm, conditions: ${profile.conditions}.
+
+Given the following stats: 
+breathing rate in bpm {
+	average: ${Math.round(stats.breathing.average)}
+	max: ${Math.round(stats.breathing.max)}
+	min: ${Math.round(stats.breathing.min)}
+},
+pulse in BPM {
+	average: ${Math.round(stats.pulse.average)}
+	max: ${Math.round(stats.pulse.max)}
+	min: ${Math.round(stats.pulse.min)}
+}
+
+Summarize the data and make general observations. Do not provide a medical diagnosis. If anything seems abnormal, mention it in the response and add at the end “It is recommended to contact a caretaker.”
+        Answer only with max 500 characters.`;
+
+    const result = await model.generateContent(prompt);
+    return result.response.text().trim();
+
+  } catch (error: any) {
+    console.warn("[Gemini Session Analysis Error]:", error.message);
+    return "Unable to generate AI analysis at this time. Statistical data is shown accurately in the charts.";
+  }
 }
